@@ -12,3 +12,4 @@ src/declarations/
 !tsconfig.json
 !.env
 !README.md
+.vscode

@@ -13,28 +13,28 @@ import Order "mo:base/Order";
 import Float "mo:base/Float";
 import Int "mo:base/Int";
 
-actor UserNode {
+persistent actor UserNode {
 
     // **Stable Variables**
-    stable var owner : ?Principal = null;
-    stable var allowedReadersEntries : [(Principal, ())] = [];
-    stable var khetStore : [(Text, KhetMetadata)] = [];
-    stable var pendingKhetStore : [(Text, KhetMetadata)] = [];
-    stable var hashToBlobIdStore : [(Text, (Text, Bool))] = [];
-    stable var blobStoreStable : [(Text, [(Nat, Blob)])] = [];
-    stable var blobMetaStoreStable : [(Text, Nat)] = [];
-    stable var messages : [Message] = [];
-    stable var playerStore : [(Principal, PlayerData)] = [];
-    stable var username: ?Text = null;
+    var owner : ?Principal = null;
+    var allowedReadersEntries : [(Principal, ())] = [];
+    var khetStore : [(Text, KhetMetadata)] = [];
+    var pendingKhetStore : [(Text, KhetMetadata)] = [];
+    var hashToBlobIdStore : [(Text, (Text, Bool))] = [];
+    var blobStoreStable : [(Text, [(Nat, Blob)])] = [];
+    var blobMetaStoreStable : [(Text, Nat)] = [];
+    var messages : [Message] = [];
+    var playerStore : [(Principal, PlayerData)] = [];
+    var username: ?Text = null;
 
     // **In-Memory HashMaps**
-    var allowedReaders = HashMap.fromIter<Principal, ()>(allowedReadersEntries.vals(), 10, Principal.equal, Principal.hash);
-    var khets = HashMap.fromIter<Text, KhetMetadata>(khetStore.vals(), 10, Text.equal, Text.hash);
-    var pendingKhets = HashMap.fromIter<Text, KhetMetadata>(pendingKhetStore.vals(), 10, Text.equal, Text.hash);
-    var hashToBlobId = HashMap.fromIter<Text, (Text, Bool)>(hashToBlobIdStore.vals(), 10, Text.equal, Text.hash);
-    var blobStore = HashMap.HashMap<Text, [(Nat, Blob)]>(10, Text.equal, Text.hash);
-    var blobMetaStore = HashMap.HashMap<Text, Nat>(10, Text.equal, Text.hash);
-    var players = HashMap.fromIter<Principal, PlayerData>(playerStore.vals(), 10, Principal.equal, Principal.hash);
+    transient var allowedReaders = HashMap.fromIter<Principal, ()>(allowedReadersEntries.vals(), 10, Principal.equal, Principal.hash);
+    transient var khets = HashMap.fromIter<Text, KhetMetadata>(khetStore.vals(), 10, Text.equal, Text.hash);
+    transient var pendingKhets = HashMap.fromIter<Text, KhetMetadata>(pendingKhetStore.vals(), 10, Text.equal, Text.hash);
+    transient var hashToBlobId = HashMap.fromIter<Text, (Text, Bool)>(hashToBlobIdStore.vals(), 10, Text.equal, Text.hash);
+    transient var blobStore = HashMap.HashMap<Text, [(Nat, Blob)]>(10, Text.equal, Text.hash);
+    transient var blobMetaStore = HashMap.HashMap<Text, Nat>(10, Text.equal, Text.hash);
+    transient var players = HashMap.fromIter<Principal, PlayerData>(playerStore.vals(), 10, Principal.equal, Principal.hash);
 
     // **Type Definitions**
     public type Position = (Float, Float, Float);
@@ -52,7 +52,7 @@ actor UserNode {
         expiration: Int;
     };
 
-    let MAX_MESSAGES = 100;
+    transient let MAX_MESSAGES = 100;
     type Message = {
         sender: Text;
         text: Text;
@@ -100,7 +100,7 @@ actor UserNode {
     };
 
     // **Initialization by Cardinal**
-    let cardinal = actor ("bkyz2-fmaaa-aaaaa-qaaaq-cai") : actor {};
+    transient let cardinal = actor ("bkyz2-fmaaa-aaaaa-qaaaq-cai") : actor {};
     public shared ({ caller }) func init(ownerPrincipal : Principal) : async () {
         assert (caller == Principal.fromActor(cardinal));
         assert (Option.isNull(owner));
@@ -242,7 +242,7 @@ actor UserNode {
     };
 
     // **Management Functions**
-    let cardinalPrincipal = Principal.fromText("bkyz2-fmaaa-aaaaa-qaaaq-cai");
+    transient let cardinalPrincipal = Principal.fromText("bkyz2-fmaaa-aaaaa-qaaaq-cai");
     public shared({ caller }) func addReader(reader: Principal) : async () {
         switch (owner) {
             case (?own) {

@@ -3,7 +3,7 @@ import { Principal } from '@dfinity/principal';
 import { viewerState, sceneObjects, worldController, animationMixers, khetState } from './index.js';
 import { khetController, clearAllKhets } from './khet.js';
 import { nodeSettings, requestNewCanister, getAccessibleCanisters, getCardinalActor } from './nodeManager.js';
-import { initAuth, getIdentity, login, user, generateInvitation } from './user.js';
+import { initAuth, getIdentity, login, user } from './user.js';
 import { chat } from './chat.js';
 import { online } from './peermesh.js'
 import { avatarState } from './avatar.js'
@@ -119,7 +119,7 @@ export async function handleInvitation() {
         const confirmAccept = confirm('Accept friend request?');
         if (confirmAccept) {
             const actor = await getCardinalActor();
-            const result = await actor.acceptFriendInvitation(token);
+            const result = await actor.acceptFriendInvitation(inviteToken);
             if ('ok' in result) {
                 alert('Friend request accepted');
                 window.history.replaceState({}, document.title, window.location.pathname);

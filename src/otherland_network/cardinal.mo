@@ -13,27 +13,27 @@ import Nat "mo:base/Nat";
 import Int "mo:base/Int";
 import Time "mo:base/Time";
 
-actor Cardinal {
+persistent actor Cardinal {
 
   // Stable variables for raw data
-  stable var _adminPrincipal : Principal = Principal.fromText("fxhz4-w423j-q2chq-mcdn2-ihrcb-egwai-7eoh5-x4y76-3zzsk-4loyy-fqe");
-  stable var registryEntries : [(Principal, Principal)] = [];
-  stable var wasmModule : ?Blob = null;
-  stable var isWasmReady : Bool = false;
-  stable var accessControlEntries : [(Principal, [(Principal, ())])] = [];
-  stable var friendListsEntries : [(Principal, [Principal])] = [];
-  stable var invitationsEntries : [(Text, Invitation)] = [];
-  stable var invitationCounter : Nat = 0;
-  stable var nodeVisibilityEntries : [(Principal, Bool)] = [];
+  var _adminPrincipal : Principal = Principal.fromText("fxhz4-w423j-q2chq-mcdn2-ihrcb-egwai-7eoh5-x4y76-3zzsk-4loyy-fqe");
+  var registryEntries : [(Principal, Principal)] = [];
+  var wasmModule : ?Blob = null;
+  var isWasmReady : Bool = false;
+  var accessControlEntries : [(Principal, [(Principal, ())])] = [];
+  var friendListsEntries : [(Principal, [Principal])] = [];
+  var invitationsEntries : [(Text, Invitation)] = [];
+  var invitationCounter : Nat = 0;
+  var nodeVisibilityEntries : [(Principal, Bool)] = [];
 
   // In-memory HashMaps reconstructed from stable data
-  var registry = HashMap.fromIter<Principal, Principal>(
+  transient var registry = HashMap.fromIter<Principal, Principal>(
     registryEntries.vals(),
     10,
     Principal.equal,
     Principal.hash
   );
-  var accessControl = HashMap.fromIter<Principal, HashMap.HashMap<Principal, ()>>(
+  transient var accessControl = HashMap.fromIter<Principal, HashMap.HashMap<Principal, ()>>(
     Iter.map<(Principal, [(Principal, ())]), (Principal, HashMap.HashMap<Principal, ()>)>(
       accessControlEntries.vals(),
       func((user, allowedList)) {
@@ -44,19 +44,19 @@ actor Cardinal {
     Principal.equal,
     Principal.hash
   );
-  var friendLists = HashMap.fromIter<Principal, [Principal]>(
+  transient var friendLists = HashMap.fromIter<Principal, [Principal]>(
     friendListsEntries.vals(),
     10,
     Principal.equal,
     Principal.hash
   );
-  var invitations = HashMap.fromIter<Text, Invitation>(
+  transient var invitations = HashMap.fromIter<Text, Invitation>(
       invitationsEntries.vals(),
       10,
       Text.equal,
       Text.hash
   );
-  var nodeVisibility = HashMap.fromIter<Principal, Bool>(
+  transient var nodeVisibility = HashMap.fromIter<Principal, Bool>(
     nodeVisibilityEntries.vals(),
     10,
     Principal.equal,
@@ -208,7 +208,7 @@ actor Cardinal {
   // Node Visibility Management
   public shared({ caller }) func setNodeVisibility(isPublic : Bool) : async () {
     switch (registry.get(caller)) {
-      case (?canisterId) {
+      case (?_canisterId) {
         nodeVisibility.put(caller, isPublic);
       };
       case null {
@@ -271,12 +271,11 @@ actor Cardinal {
       case null {
 
         // Create a new canister with initial cycle funding
-        Cycles.add<system>(1_000_000_000_000); // 1T cycles
         let ic = actor("aaaaa-aa") : actor {                                                               // Placeholder admin principal
           create_canister : <system> () -> async { canister_id : Principal };
           install_code : <system>({ canister_id : Principal; wasm_module : Blob; arg : Blob; mode : { #install } }) -> async ();
         };
-        let { canister_id } = await ic.create_canister();
+        let { canister_id } = await (with cycles = 1_000_000_000_000) ic.create_canister(); // 1T cycles
 
         // Install the WASM module
         switch (wasmModule) {
@@ -370,7 +369,7 @@ actor Cardinal {
   };
 
   // Upload WASM module (restricted to an admin principal for simplicity)
-  public shared({ caller }) func uploadWasmModule(wasmModuleBlob : Blob) : async () {
+  public shared({ caller = _ }) func uploadWasmModule(wasmModuleBlob : Blob) : async () {
     // Replace with your admin principal in production
     //assert(caller == adminPrincipal);  // Placeholder admin principal
     isWasmReady := false; // Mark as not ready during upload
