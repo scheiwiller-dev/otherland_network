@@ -1,6 +1,6 @@
 export const CANISTER_IDS = {
-  USER_NODE: process.env.USER_NODE_CANISTER_ID || 'umunu-kh777-77774-qaaca-cai',
-  CARDINAL:   process.env.CARDINAL_CANISTER_ID   || 'uxrrr-q7777-77774-qaaaq-cai',
+  USER_NODE: process.env.USER_NODE_CANISTER_ID || process.env.CANISTER_ID_USER_NODE,
+  CARDINAL:  process.env.CARDINAL_CANISTER_ID   || process.env.CANISTER_ID_CARDINAL,
+  INTERNET_IDENTITY: process.env.INTERNET_IDENTITY_CANISTER_ID || process.env.CANISTER_ID_INTERNET_IDENTITY,
+  OTHERLAND_CLIENT: process.env.OTHERLAND_CLIENT_CANISTER_ID || process.env.CANISTER_ID_OTHERLAND_CLIENT,
 };
-
-export const IS_MAINNET = process.env.DFX_NETWORK === 'ic';

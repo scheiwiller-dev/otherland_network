@@ -2,7 +2,7 @@ import { defineConfig } from 'vite';
 import { fileURLToPath, URL } from 'url';
 import environment from 'vite-plugin-environment';
 import dotenv from 'dotenv';
-import { viteStaticCopy } from 'vite-plugin-static-copy'; // New plugin
+import { viteStaticCopy } from 'vite-plugin-static-copy';
 
 dotenv.config({ path: '../../.env' });
 
@@ -39,6 +39,12 @@ export default defineConfig({
       ]
     })
   ],
+  define: {
+    'process.env.USER_NODE_CANISTER_ID': JSON.stringify(process.env.USER_NODE_CANISTER_ID || process.env.CANISTER_ID_USER_NODE),
+    'process.env.CARDINAL_CANISTER_ID':   JSON.stringify(process.env.CARDINAL_CANISTER_ID   || process.env.CANISTER_ID_CARDINAL),
+    'process.env.INTERNET_IDENTITY_CANISTER_ID': JSON.stringify(process.env.INTERNET_IDENTITY_CANISTER_ID || process.env.CANISTER_ID_INTERNET_IDENTITY),
+    'process.env.OTHERLAND_CLIENT_CANISTER_ID': JSON.stringify(process.env.OTHERLAND_CLIENT_CANISTER_ID || process.env.CANISTER_ID_OTHERLAND_CLIENT),
+  },
   resolve: {
     alias: [
       {

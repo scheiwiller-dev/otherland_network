@@ -4,9 +4,7 @@ import { user, authReady, getIdentity } from './user.js';
 import { khetController, getUserNodeActor } from './khet.js';
 import { updateKhetTable } from './menu.js';
 import { online } from './peermesh.js'
-
-// Cardinal canister ID
-const CARDINAL_CANISTER_ID = 'ulvla-h7777-77774-qaacq-cai';
+import { CANISTER_IDS } from './canisterIds.js';
 
 let cardinalAgentInstance = null;
 let cardinalActor = null;
@@ -39,7 +37,7 @@ export async function getCardinalActor() {
     if (!cardinalActor) {
         cardinalActor = Actor.createActor(cardinalIdlFactory, { 
             agent: cardinalAgentInstance, 
-            canisterId: CARDINAL_CANISTER_ID 
+            canisterId: CANISTER_IDS.CARDINAL_CANISTER_ID 
         });
     }
 

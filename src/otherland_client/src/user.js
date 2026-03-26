@@ -2,12 +2,11 @@ import { AuthClient } from "@dfinity/auth-client";
 import { AnonymousIdentity } from "@dfinity/agent";
 import { getUserNodeActor } from './khet.js';
 import { handleInvitation, updateFriendsList } from './menu.js';
+import { CANISTER_IDS } from './canisterIds.js';
 
 // Authentication client instance and identity
 let authClient;
 let identity;
-
-const iiCanisterId = `http://u6s2n-gx777-77774-qaaba-cai.localhost:4943/`;
 
 // Promise to track authentication readiness
 export let authReady = null;
@@ -65,12 +64,31 @@ export function getIdentity() {
 // Trigger Internet Identity login
 export async function login() {
     try {
+        const isLocal = (process.env.DFX_NETWORK === 'local' || !process.env.DFX_NETWORK);
+        const iiProvider = isLocal
+            ? `http://${CANISTER_IDS.INTERNET_IDENTITY}.localhost:4943`
+            : 'https://identity.ic0.app';
+
         await authClient.login({
-            identityProvider: process.env.DFX_NETWORK === 'local' ? iiCanisterId : 'https://identity.ic0.app',
+            identityProvider: iiProvider,
             onSuccess: async () => {
                 identity = await authClient.getIdentity();
                 user.setUserPrincipal(identity.getPrincipal().toText());
                 console.log("Logged in with principal:", user.getUserPrincipal());
+
+                try {
+                    const { getAccessibleCanisters, nodeSettings } = await import('./nodeManager.js');
+                    await getAccessibleCanisters();                    // populates userOwnedNodes
+                    if (nodeSettings.userOwnedNodes?.length > 0) {
+                        nodeSettings.nodeId = nodeSettings.userOwnedNodes[0];   // your own canister
+                        nodeSettings.nodeType = 0;                              // or whatever your default is
+                        nodeSettings.displayNodeConfig?.();                     // optional
+                        console.log("Node initialized after II login");
+                    }
+                } catch (e) {
+                    console.warn("Could not auto-select node after login", e);
+                }
+
                 await setupUsername();
                 await updateFriendsList();
                 handleInvitation();
