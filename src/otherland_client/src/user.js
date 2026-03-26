@@ -7,7 +7,7 @@ import { handleInvitation, updateFriendsList } from './menu.js';
 let authClient;
 let identity;
 
-const iiCanisterId = `http://bd3sg-teaaa-aaaaa-qaaba-cai.localhost:4943/`;
+const iiCanisterId = `http://u6s2n-gx777-77774-qaaba-cai.localhost:4943/`;
 
 // Promise to track authentication readiness
 export let authReady = null;

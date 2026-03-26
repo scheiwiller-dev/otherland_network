@@ -6,7 +6,7 @@ import { updateKhetTable } from './menu.js';
 import { online } from './peermesh.js'
 
 // Cardinal canister ID
-const CARDINAL_CANISTER_ID = 'bkyz2-fmaaa-aaaaa-qaaaq-cai';
+const CARDINAL_CANISTER_ID = 'ulvla-h7777-77774-qaacq-cai';
 
 let cardinalAgentInstance = null;
 let cardinalActor = null;
