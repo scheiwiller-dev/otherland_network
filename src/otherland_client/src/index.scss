@@ -140,7 +140,7 @@ canvas {
       padding: 14px;
       margin-bottom: 20px;
       font-size: 16px;
-      background: #222;
+      background: black;
       color: $secondary-color;
       border: 1px solid $primary-color;
       border-radius: 6px;
@@ -149,10 +149,14 @@ canvas {
 
     button {
       @include button-style;
-      width: 100%;
+      width: calc(50% - 12.5px);
       margin: 10px 0;
       padding: 14px;
       font-size: 17px;
+    }
+
+    #cancel-username-btn {
+      margin-right: 20px;
     }
 
     .error-message {

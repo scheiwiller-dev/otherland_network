@@ -23,7 +23,7 @@ document.addEventListener('pointerlockchange', () => {
     if (!document.pointerLockElement) { leaveViewer() } else { enterViewer() }
 });
 
-//
+// Enter 3D World
 function enterViewer() {
     userIsInWorld = true;
     document.getElementById('guiLayer').style.display = 'block'; // Hide the GUI layer when pointer lock is acquired
@@ -42,7 +42,7 @@ function enterViewer() {
     animator.start();                // Start animation when pointer lock is acquired
 }
 
-//
+// Leave 3D World
 function leaveViewer() {
     const gameMenu = document.getElementById('game-menu');
     gameMenu.style.display = 'flex'; // Show the game menu when pointer lock is released
@@ -61,6 +61,8 @@ export const keys = new Set();
 
 // Handle key presses, including the Escape key to show the game menu
 document.addEventListener('keydown', event => {
+    if (!event || !event.key || typeof event.key !== 'string') return;
+
     const key = event.key.toLowerCase();
     keys.add(key); // Add pressed key to the set
 
@@ -423,19 +425,69 @@ document.addEventListener('DOMContentLoaded', async () => {
         page.classList.add('active'); // Activate the selected page
     }
     
-    // Function to move button to account switcher
-    function moveToAccountSwitcher(button) {
+    // Unified account switcher - handles Guest and II-logged-in states with action buttons
+    function updateAccountSwitcher(isGuest = false) {
         document.getElementById("info-box").style.display = 'block';
-        const clonedButton = button.cloneNode(true);
-        
-        // Prefer username if set, otherwise fall back to principal
-        const displayName = user.getUserName() && user.getUserName().trim() !== '' 
-            ? `<strong>${user.getUserName()}</strong>` 
-            : user.getUserPrincipal().slice(0, 8) + '...';
-        
-        clonedButton.textContent = `Logged in as ${displayName}`;
+        const accountSwitcher = document.getElementById('account-switcher');
         accountSwitcher.innerHTML = '';
-        accountSwitcher.appendChild(clonedButton);
+
+        const container = document.createElement('div');
+        container.style.textAlign = 'center';
+
+        if (isGuest) {
+            const status = document.createElement('button');
+            status.textContent = 'Logged in as Guest';
+            status.style.cursor = 'default';
+            container.appendChild(status);
+
+            const loginBtn = document.createElement('button');
+            loginBtn.textContent = 'Login with Internet Identity';
+            loginBtn.style.marginTop = '8px';
+            loginBtn.addEventListener('click', async () => {
+                await login();   // triggers full II flow (will show username screen if needed)
+            });
+            container.appendChild(loginBtn);
+        } else {
+            // II Logged-in user
+            const username = user.getUserName() && user.getUserName().trim() !== '' 
+                ? user.getUserName().trim() 
+                : null;
+            
+            const principalShort = user.getUserPrincipal() 
+                ? user.getUserPrincipal().slice(0, 11) + '...' 
+                : '';
+
+            const displayText = username 
+                ? `Logged in as <strong>${username}</strong><br>(${principalShort})` 
+                : `Logged in as ${principalShort}`;
+
+            const status = document.createElement('button');
+            status.innerHTML = displayText;
+            status.style.cursor = 'default';
+            container.appendChild(status);
+
+            const logoutBtn = document.createElement('button');
+            logoutBtn.textContent = 'Logout';
+            logoutBtn.style.marginTop = '8px';
+            logoutBtn.addEventListener('click', async () => {
+                const { logout } = await import('./user.js');
+                await logout();
+                // Return to clean start screen
+                document.getElementById('main-menu').style.display = 'none';
+                document.getElementById('info-box').style.display = 'none';
+                document.getElementById('start-screen').style.display = 'flex';
+            });
+            container.appendChild(logoutBtn);
+        }
+
+        accountSwitcher.appendChild(container);
+    }
+
+    // Unified function to show logged-in state
+    function showLoggedInUI() {
+        document.getElementById('start-screen').style.display = 'none';
+        document.getElementById('main-menu').style.display = 'block';
+        updateAccountSwitcher(false); 
     }
 
     // **Main Menu**
@@ -493,7 +545,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         try {
             const actor = await getUserNodeActor();
             if (actor) {
-                await actor.setUsername(newUsername);   // store on chain if node exists
+                await actor.setUsername(newUsername);
             }
             
             localStorage.setItem('username', newUsername);
@@ -501,16 +553,9 @@ document.addEventListener('DOMContentLoaded', async () => {
             
             console.log('Username set successfully:', newUsername);
             
-            // Hide screen and show main menu
+            // Hide screen and show logged-in UI consistently
             usernameScreen.style.display = 'none';
-            document.getElementById('main-menu').style.display = 'block';
-            
-            // Update and show account info box with username
-            const connectIIBtn = document.getElementById('connect-ii-btn');
-            if (connectIIBtn) {
-                connectIIBtn.textContent = `Logged in as ${newUsername}`;
-                moveToAccountSwitcher(connectIIBtn);
-            }
+            showLoggedInUI();
             
             await updateFriendsList();
             handleInvitation();
@@ -898,14 +943,19 @@ document.addEventListener('DOMContentLoaded', async () => {
         //uploadBtn.disabled = true;
         //clearBtn.disabled = true;
     } else {
-        // User is logged in
+        // User is logged in with II
         user.setUserPrincipal(identity.getPrincipal().toText());
-        connectIIBtn.textContent = `Logged in as ${user.getUserPrincipal().slice(0, 5)}...`;
-        moveToAccountSwitcher(connectIIBtn); // Move button to account switcher
         
-        console.log("Moving the main Menu");
-        document.getElementById('start-screen').style.display = 'none';
-        document.getElementById('main-menu').style.display = 'block';
+        const savedUsername = localStorage.getItem('username');
+        if (savedUsername) {
+            user.setUserName(savedUsername);
+            showLoggedInUI();
+        } else {
+            // Has II auth but no username yet → force abort to start screen
+            console.log("II auth detected on refresh but no username - aborting to force username setup");
+            const { abortUsernameSetup } = await import('./user.js');
+            await abortUsernameSetup();
+        }
     }
 
     // Event listener for login button
@@ -915,10 +965,10 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // Event listener for guest button
     continueGuestBtn.addEventListener('click', () => {
-        moveToAccountSwitcher(continueGuestBtn);
-        
         startScreen.style.display = 'none';
         mainMenu.style.display = 'block';
+
+        updateAccountSwitcher(true);   // true = guest mode
     });
 
     // Upload WASM module

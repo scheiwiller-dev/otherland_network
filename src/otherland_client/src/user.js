@@ -98,16 +98,13 @@ export async function login() {
                     document.getElementById('start-screen').style.display = 'none';
                     document.getElementById('main-menu').style.display = 'block';
                     
-                    // Show account info box for consistency with refresh path
-                    const connectIIBtn = document.getElementById('connect-ii-btn');
-                    if (connectIIBtn) {
-                        connectIIBtn.textContent = `Logged in as ${user.getUserPrincipal().slice(0, 8)}...`;
-                        // Reuse the function from menu.js (it will be available)
-                        if (typeof moveToAccountSwitcher === 'function') {
-                            moveToAccountSwitcher(connectIIBtn);
-                        } else {
-                            document.getElementById('info-box').style.display = 'block';
-                        }
+                    // Use the unified function from menu.js (it will be available after DOMContentLoaded)
+                    if (typeof showLoggedInUI === 'function') {
+                        showLoggedInUI();
+                    } else {
+                        document.getElementById('start-screen').style.display = 'none';
+                        document.getElementById('main-menu').style.display = 'block';
+                        document.getElementById('info-box').style.display = 'block';
                     }
                 }
                 // else: username screen is shown - it will handle continuation after save
