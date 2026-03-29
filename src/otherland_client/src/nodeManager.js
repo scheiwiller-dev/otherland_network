@@ -37,7 +37,7 @@ export async function getCardinalActor() {
     if (!cardinalActor) {
         cardinalActor = Actor.createActor(cardinalIdlFactory, { 
             agent: cardinalAgentInstance, 
-            canisterId: CANISTER_IDS.CARDINAL_CANISTER_ID 
+            canisterId: CANISTER_IDS.CARDINAL
         });
     }
 

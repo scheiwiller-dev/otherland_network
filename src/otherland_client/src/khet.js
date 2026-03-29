@@ -19,22 +19,25 @@ import { viewerState } from './index.js';
 let agentInstance = null;
 let userNodeActor = null;
 
-// Initialize cardinal agent actor with user identity
+// Get user node actor for the current user's node
 export async function getUserNodeActor() {
+    // Guard for new users who don't have a node yet (prevents canister ID error during first II login)
+    if (!nodeSettings.nodeId || typeof nodeSettings.nodeId !== 'string') {
+        console.warn('No user node ID available yet - returning null (normal for new users)');
+        return null;
+    }
 
-    // Create HTTP Agent with Internet Identity
-    if (!agentInstance) {
-
+    if (!userNodeAgentInstance) {
         await authReady;
 
-        agentInstance = new HttpAgent({ 
+        userNodeAgentInstance = new HttpAgent({ 
             host: process.env.DFX_NETWORK === 'local' ? 'http://localhost:4943' : window.location.origin, 
             identity: getIdentity() 
         });
 
         if (process.env.DFX_NETWORK === 'local') {
             try {
-                await agentInstance.fetchRootKey();
+                await userNodeAgentInstance.fetchRootKey();
                 console.log('Root key fetched successfully');
             } catch (err) {
                 console.error('Unable to fetch root key:', err);
@@ -43,11 +46,10 @@ export async function getUserNodeActor() {
         }
     }
 
-    // Create actor for the cardinal canister
     if (!userNodeActor) {
         userNodeActor = Actor.createActor(userNodeIdlFactory, { 
-            agent: agentInstance, 
-            canisterId: nodeSettings.nodeId
+            agent: userNodeAgentInstance, 
+            canisterId: nodeSettings.nodeId 
         });
     }
 

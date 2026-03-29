@@ -80,19 +80,37 @@ export async function login() {
                     const { getAccessibleCanisters, nodeSettings } = await import('./nodeManager.js');
                     await getAccessibleCanisters();                    // populates userOwnedNodes
                     if (nodeSettings.userOwnedNodes?.length > 0) {
-                        nodeSettings.nodeId = nodeSettings.userOwnedNodes[0];   // your own canister
-                        nodeSettings.nodeType = 0;                              // or whatever your default is
-                        nodeSettings.displayNodeConfig?.();                     // optional
+                        nodeSettings.nodeId = nodeSettings.userOwnedNodes[0];
+                        nodeSettings.nodeType = 0;
+                        nodeSettings.displayNodeConfig?.();
                         console.log("Node initialized after II login");
                     }
                 } catch (e) {
                     console.warn("Could not auto-select node after login", e);
                 }
 
-                await setupUsername();
-                await updateFriendsList();
-                handleInvitation();
-                //location.reload();
+                const usernameReady = await setupUsername();
+
+                if (usernameReady) {
+                    await updateFriendsList();
+                    handleInvitation();
+                    
+                    document.getElementById('start-screen').style.display = 'none';
+                    document.getElementById('main-menu').style.display = 'block';
+                    
+                    // Show account info box for consistency with refresh path
+                    const connectIIBtn = document.getElementById('connect-ii-btn');
+                    if (connectIIBtn) {
+                        connectIIBtn.textContent = `Logged in as ${user.getUserPrincipal().slice(0, 8)}...`;
+                        // Reuse the function from menu.js (it will be available)
+                        if (typeof moveToAccountSwitcher === 'function') {
+                            moveToAccountSwitcher(connectIIBtn);
+                        } else {
+                            document.getElementById('info-box').style.display = 'block';
+                        }
+                    }
+                }
+                // else: username screen is shown - it will handle continuation after save
             },
             onError: (error) => {
                 console.error("Login failed:", error);
@@ -115,16 +133,60 @@ export async function logout() {
     }
 }
 
+// Setup username
 async function setupUsername() {
-    const actor = await getUserNodeActor();
-    const currentUsername = await actor.getUsername();
-    if (!currentUsername[0]) {
-        const username = prompt('Please enter your username:');
-        if (username) {
-            await actor.setUsername(username);
-            localStorage.setItem('username', username);
+    try {
+        const actor = await getUserNodeActor();  // may return null for users without a node yet
+
+        let hasUsername = false;
+        let currentUsername = null;
+
+        if (actor) {
+            try {
+                const result = await actor.getUsername();
+                currentUsername = result && result[0] ? result[0] : null;
+                hasUsername = !!currentUsername;
+            } catch (e) {
+                console.warn('Could not read username from actor (new user without node?):', e);
+            }
         }
-    } else {
-        localStorage.setItem('username', currentUsername[0]);
+
+        if (hasUsername) {
+            // Username already set → store and continue normally
+            localStorage.setItem('username', currentUsername);
+            user.setUserName(currentUsername);
+            console.log('Username loaded:', currentUsername);
+            return true;  // username ready
+        } else {
+            // No username yet → show the dedicated screen
+            console.log('No username found - showing username setup screen');
+            document.getElementById('start-screen').style.display = 'none';
+            document.getElementById('username-screen').style.display = 'flex';  // use flex for centering
+            return false; // username screen shown
+        }
+    } catch (error) {
+        console.error('Error during username setup:', error);
+        return false;
+    }
+}
+
+// Force logout and clear session - used when user aborts username setup
+export async function abortUsernameSetup() {
+    try {
+        if (authClient) {
+            await authClient.logout();
+        }
+        identity = new AnonymousIdentity();
+        user.setUserPrincipal("");
+        user.setUserName("");
+        localStorage.removeItem('username');
+        console.log("Username setup aborted - session cleared, returning to start screen");
+        
+        // Force UI back to start screen
+        document.getElementById('username-screen').style.display = 'none';
+        document.getElementById('main-menu').style.display = 'none';
+        document.getElementById('start-screen').style.display = 'flex';
+    } catch (error) {
+        console.error("Error during abort:", error);
     }
 }

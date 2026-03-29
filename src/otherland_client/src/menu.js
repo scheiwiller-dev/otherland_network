@@ -1,7 +1,7 @@
 // Import necessary components
 import { Principal } from '@dfinity/principal';
 import { viewerState, sceneObjects, worldController, animationMixers, khetState } from './index.js';
-import { khetController, clearAllKhets } from './khet.js';
+import { khetController, clearAllKhets, getUserNodeActor } from './khet.js';
 import { nodeSettings, requestNewCanister, getAccessibleCanisters, getCardinalActor } from './nodeManager.js';
 import { initAuth, getIdentity, login, user } from './user.js';
 import { chat } from './chat.js';
@@ -94,6 +94,7 @@ export function escButtonPress() {
 
 // Handle key releases to remove keys from the set
 document.addEventListener('keyup', event => {
+    if (!event || !event.key || typeof event.key !== 'string') return;
     keys.delete(event.key.toLowerCase());
 });
 
@@ -426,6 +427,13 @@ document.addEventListener('DOMContentLoaded', async () => {
     function moveToAccountSwitcher(button) {
         document.getElementById("info-box").style.display = 'block';
         const clonedButton = button.cloneNode(true);
+        
+        // Prefer username if set, otherwise fall back to principal
+        const displayName = user.getUserName() && user.getUserName().trim() !== '' 
+            ? `<strong>${user.getUserName()}</strong>` 
+            : user.getUserPrincipal().slice(0, 8) + '...';
+        
+        clonedButton.textContent = `Logged in as ${displayName}`;
         accountSwitcher.innerHTML = '';
         accountSwitcher.appendChild(clonedButton);
     }
@@ -465,6 +473,60 @@ document.addEventListener('DOMContentLoaded', async () => {
         nodeSettings.availableNodes.push(userNodeId);
         await updateNodeList();
     });
+
+    // Setup Username Page
+    const usernameScreen = document.getElementById('username-screen');
+    const usernameInput = document.getElementById('username-input');
+    const cancelBtn = document.getElementById('cancel-username-btn');
+    const saveBtn = document.getElementById('save-username-btn');
+    const errorEl = document.getElementById('username-error');
+    if (!saveBtn) return;
+    saveBtn.addEventListener('click', async () => {
+        const newUsername = usernameInput.value.trim();
+        
+        if (!newUsername || newUsername.length < 3) {
+            errorEl.textContent = 'Username must be at least 3 characters';
+            errorEl.style.display = 'block';
+            return;
+        }
+
+        try {
+            const actor = await getUserNodeActor();
+            if (actor) {
+                await actor.setUsername(newUsername);   // store on chain if node exists
+            }
+            
+            localStorage.setItem('username', newUsername);
+            user.setUserName(newUsername);
+            
+            console.log('Username set successfully:', newUsername);
+            
+            // Hide screen and show main menu
+            usernameScreen.style.display = 'none';
+            document.getElementById('main-menu').style.display = 'block';
+            
+            // Update and show account info box with username
+            const connectIIBtn = document.getElementById('connect-ii-btn');
+            if (connectIIBtn) {
+                connectIIBtn.textContent = `Logged in as ${newUsername}`;
+                moveToAccountSwitcher(connectIIBtn);
+            }
+            
+            await updateFriendsList();
+            handleInvitation();
+            
+        } catch (err) {
+            console.error('Failed to save username:', err);
+            errorEl.textContent = 'Failed to save username. Please try again.';
+            errorEl.style.display = 'block';
+        }
+    });
+    if (cancelBtn) {
+        cancelBtn.addEventListener('click', async () => {
+            const { abortUsernameSetup } = await import('./user.js');
+            await abortUsernameSetup();
+        });
+    }
 
     // Edit Node Button
     const editNodeBtn = document.getElementById('edit-node-btn');
@@ -818,6 +880,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Initially, show the start screen
     startScreen.style.display = 'flex';
     mainMenu.style.display = 'none';
+    usernameScreen.style.display = 'none';
 
     // Initialize authentication and get identity
     await initAuth();
