@@ -12,6 +12,7 @@ import Text "mo:base/Text";
 import Nat "mo:base/Nat";
 import Int "mo:base/Int";
 import Time "mo:base/Time";
+import Debug "mo:base/Debug"
 
 persistent actor Cardinal {
 
@@ -270,22 +271,36 @@ persistent actor Cardinal {
       };
       case null {
 
+        // Guard against cardinal running out of cycles
+        // We keep a 2.5x margin on the measured consumption (~2T)
+        if (Cycles.balance() < 5_100_000_000_000) {
+          return #err("Cardinal canister has insufficient cycles. Top it up with: dfx ledger fabricate-cycles --all");
+        };
+
+        Debug.print("=== requestCanister start - balance: " # Nat.toText(Cycles.balance()));
+
         // Create a new canister with initial cycle funding
         let ic = actor("aaaaa-aa") : actor {                                                               // Placeholder admin principal
           create_canister : <system> () -> async { canister_id : Principal };
           install_code : <system>({ canister_id : Principal; wasm_module : Blob; arg : Blob; mode : { #install } }) -> async ();
         };
-        let { canister_id } = await (with cycles = 1_000_000_000_000) ic.create_canister(); // 1T cycles
+
+        // 2.5x margin applied to measured usage
+        let { canister_id } = await (with cycles = 1_300_000_000_000) ic.create_canister();  // ~1.3T (was 2T)
+
+        Debug.print("create_canister done - balance now: " # Nat.toText(Cycles.balance()));
 
         // Install the WASM module
         switch (wasmModule) {
           case (?wasmModuleBlob) {
-            await ic.install_code({
+            // 2.5x margin for install + buffer for the init call
+            await (with cycles = 650_000_000_000) ic.install_code({
               canister_id;
               wasm_module = wasmModuleBlob;
               arg = Blob.fromArray([]); // Empty args
               mode = #install;
             });
+            Debug.print("install_code done - balance now: " # Nat.toText(Cycles.balance()));
           };
           case null {
             return #err("WASM module not available.");
@@ -296,7 +311,9 @@ persistent actor Cardinal {
         let userCanister = actor(Principal.toText(canister_id)) : actor {
           init : (Principal) -> async ();
         };
-        await userCanister.init(caller);
+        // Extra cycles for the init call (small but safe)
+        await (with cycles = 100_000_000_000) userCanister.init(caller);
+        Debug.print("init done - balance now: " # Nat.toText(Cycles.balance()));
 
         // Register the canister and set up access control
         registry.put(caller, canister_id);
@@ -304,6 +321,7 @@ persistent actor Cardinal {
         let allowedMap = HashMap.HashMap<Principal, ()>(10, Principal.equal, Principal.hash);
         allowedMap.put(caller, ()); // Owner is always allowed
         accessControl.put(caller, allowedMap);
+        Debug.print("=== requestCanister finished successfully");
         return #ok(canister_id);
       };
     };

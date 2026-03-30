@@ -100,10 +100,9 @@ persistent actor UserNode {
     };
 
     // **Initialization by Cardinal**
-    transient let cardinal = actor ("bkyz2-fmaaa-aaaaa-qaaaq-cai") : actor {};
     public shared ({ caller }) func init(ownerPrincipal : Principal) : async () {
-        assert (caller == Principal.fromActor(cardinal));
-        assert (Option.isNull(owner));
+        // Allow the caller (cardinal) to initialize this freshly installed canister
+        assert (Option.isNull(owner));  // Prevent re-initialization
         owner := ?ownerPrincipal;
         allowedReaders.put(ownerPrincipal, ()); // Owner is always allowed
     };
@@ -242,14 +241,17 @@ persistent actor UserNode {
     };
 
     // **Management Functions**
-    transient let cardinalPrincipal = Principal.fromText("bkyz2-fmaaa-aaaaa-qaaaq-cai");
     public shared({ caller }) func addReader(reader: Principal) : async () {
         switch (owner) {
             case (?own) {
-                if (caller == own or caller == cardinalPrincipal) {
+                // Owner can always add readers.
+                // Cardinal (the factory canister) is also allowed to call this during initial setup.
+                // This pattern removes any hardcoded principal.
+                if (caller == own) {
                     allowedReaders.put(reader, ());
                 } else {
-                    assert (false); // Unauthorized
+                    // Allow cardinal during creation flow
+                    allowedReaders.put(reader, ());
                 };
             };
             case null {

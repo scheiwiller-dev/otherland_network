@@ -933,16 +933,10 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // Check if the user is authenticated
     if (identity.getPrincipal().isAnonymous()) {
-        // User is not logged in
-        startScreen.style.display = 'flex';
-        mainMenu.style.display = 'none';
-        connectIIBtn.textContent = "Connect to Internet Identity";
 
-        cardinalConnectBtn.disabled = true;
-        requestCanisterBtn.disabled = true;
-        //uploadBtn.disabled = true;
-        //clearBtn.disabled = true;
+        // User is not logged in
     } else {
+
         // User is logged in with II
         user.setUserPrincipal(identity.getPrincipal().toText());
         
