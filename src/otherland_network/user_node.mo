@@ -2,7 +2,6 @@ import Principal "mo:base/Principal";
 import HashMap "mo:base/HashMap";
 import Option "mo:base/Option";
 import Nat "mo:base/Nat";
-import _Nat32 "mo:base/Nat32";
 import Iter "mo:base/Iter";
 import Text "mo:base/Text";
 import Blob "mo:base/Blob";
@@ -12,13 +11,26 @@ import Time "mo:base/Time";
 import Order "mo:base/Order";
 import Float "mo:base/Float";
 import Int "mo:base/Int";
+import Cycles "mo:base/ExperimentalCycles";
+
+import Types "types";
 
 persistent actor UserNode {
+
+    // Types
+    type Position     = Types.Position;
+    type Size         = Types.Size;
+    type Scale        = Types.Scale;
+    type KhetMetadata = Types.KhetMetadata;
+    type PlayerData   = Types.PlayerData;
+    type Message      = Types.Message;
 
     // **Stable Variables**
     var owner : ?Principal = null;
     var allowedReadersEntries : [(Principal, ())] = [];
+    var allowedWritersEntries : [(Principal, ())] = [];
     var khetStore : [(Text, KhetMetadata)] = [];
+    var khetPermissionsEntries : [(Text, ([Principal], [Principal]))] = [];
     var pendingKhetStore : [(Text, KhetMetadata)] = [];
     var hashToBlobIdStore : [(Text, (Text, Bool))] = [];
     var blobStoreStable : [(Text, [(Nat, Blob)])] = [];
@@ -29,65 +41,28 @@ persistent actor UserNode {
 
     // **In-Memory HashMaps**
     transient var allowedReaders = HashMap.fromIter<Principal, ()>(allowedReadersEntries.vals(), 10, Principal.equal, Principal.hash);
+    transient var allowedWriters = HashMap.fromIter<Principal, ()>(allowedWritersEntries.vals(), 10, Principal.equal, Principal.hash);
     transient var khets = HashMap.fromIter<Text, KhetMetadata>(khetStore.vals(), 10, Text.equal, Text.hash);
+    transient var khetPermissions = HashMap.fromIter<Text, ([Principal], [Principal])>(khetPermissionsEntries.vals(), 10, Text.equal, Text.hash);
     transient var pendingKhets = HashMap.fromIter<Text, KhetMetadata>(pendingKhetStore.vals(), 10, Text.equal, Text.hash);
     transient var hashToBlobId = HashMap.fromIter<Text, (Text, Bool)>(hashToBlobIdStore.vals(), 10, Text.equal, Text.hash);
     transient var blobStore = HashMap.HashMap<Text, [(Nat, Blob)]>(10, Text.equal, Text.hash);
     transient var blobMetaStore = HashMap.HashMap<Text, Nat>(10, Text.equal, Text.hash);
     transient var players = HashMap.fromIter<Principal, PlayerData>(playerStore.vals(), 10, Principal.equal, Principal.hash);
 
-    // **Type Definitions**
-    public type Position = (Float, Float, Float);
-    public type Size = (Float, Float, Float);
-    public type Scale = (Float, Float, Float);
-
-    type Friend = {
-        principal: Principal;
-        username: Text;
-    };
-
-    type Invitation = {
-        targetPrincipal: Principal;
-        inviterUsername: Text;
-        expiration: Int;
-    };
-
     transient let MAX_MESSAGES = 100;
-    type Message = {
-        sender: Text;
-        text: Text;
-        timestamp: Int;
-    };
-
-    type PlayerData = {
-        principal: Principal;
-        position: Position; // (Float, Float, Float)
-        signalingMessages: [(Principal, Text)]; // (toPrincipal, message)
-        lastUpdate: Int; // Timestamp for position updates
-    };
-
-    public type KhetMetadata = {
-        khetId : Text;
-        khetType : Text;
-        gltfDataSize : Nat;
-        gltfDataRef : ?(Principal, Text, Nat); // (storageCanisterId, blobId, size)
-        position : Position;
-        originalSize : Size;
-        scale : Scale;
-        textures : ?[(Text, Blob)];
-        animations : ?[Text];
-        code : ?Text;
-        hash : Text;
-    };
 
     // **Upgrade Hooks**
     system func preupgrade() {
         allowedReadersEntries := Iter.toArray(allowedReaders.entries());
+        allowedWritersEntries := Iter.toArray(allowedWriters.entries());
         khetStore := Iter.toArray(khets.entries());
         pendingKhetStore := Iter.toArray(pendingKhets.entries());
         hashToBlobIdStore := Iter.toArray(hashToBlobId.entries());
         blobStoreStable := Iter.toArray(blobStore.entries()); // Save blob chunks
         blobMetaStoreStable := Iter.toArray(blobMetaStore.entries()); // Save blob metadata
+        khetPermissionsEntries := Iter.toArray(khetPermissions.entries());
+        playerStore := Iter.toArray(players.entries());
     };
 
     system func postupgrade() {
@@ -97,6 +72,8 @@ persistent actor UserNode {
         hashToBlobId := HashMap.fromIter<Text, (Text, Bool)>(hashToBlobIdStore.vals(), 10, Text.equal, Text.hash);
         blobStore := HashMap.fromIter<Text, [(Nat, Blob)]>(blobStoreStable.vals(), 10, Text.equal, Text.hash); // Restore chunks
         blobMetaStore := HashMap.fromIter<Text, Nat>(blobMetaStoreStable.vals(), 10, Text.equal, Text.hash); // Restore metadata
+        khetPermissions := HashMap.fromIter<Text, ([Principal], [Principal])>(khetPermissionsEntries.vals(), 10, Text.equal, Text.hash);
+        players := HashMap.fromIter<Principal, PlayerData>(playerStore.vals(), 10, Principal.equal, Principal.hash);
     };
 
     // **Initialization by Cardinal**
@@ -105,6 +82,23 @@ persistent actor UserNode {
         assert (Option.isNull(owner));  // Prevent re-initialization
         owner := ?ownerPrincipal;
         allowedReaders.put(ownerPrincipal, ()); // Owner is always allowed
+    };
+
+    // Grant/revoke functions for better access control management
+    public shared({ caller }) func grantReadAccess(user: Principal) : async () {
+        switch (owner) { case (?own) { if (caller == own) allowedReaders.put(user, ()); }; case null {}; };
+    };
+
+    public shared({ caller }) func revokeReadAccess(user: Principal) : async () {
+        switch (owner) { case (?own) { if (caller == own) allowedReaders.delete(user); }; case null {}; };
+    };
+
+    public shared({ caller }) func grantWriteAccess(user: Principal) : async () {
+        switch (owner) { case (?own) { if (caller == own) allowedWriters.put(user, ()); }; case null {}; };
+    };
+
+    public shared({ caller }) func revokeWriteAccess(user: Principal) : async () {
+        switch (owner) { case (?own) { if (caller == own) allowedWriters.delete(user); }; case null {}; };
     };
 
     // **Upload Functions**
@@ -445,18 +439,80 @@ persistent actor UserNode {
         };
     };
 
-    // Set username (only owner)
-    public shared ({ caller }) func setUsername(newUsername: Text) : async () {
+    // NEW: Per-khet permissions
+    public shared({ caller }) func updateKhetPermission(khetId: Text, allowedReadersList: [Principal], allowedWritersList: [Principal]) : async Result.Result<(), Text> {
         switch (owner) {
-            case (?own) {
-                assert (caller == own);
-                username := ?newUsername;
-            };
-            case null {
-                owner := ?caller;
-                username := ?newUsername;
-            };
+        case (?own) { if (caller != own) return #err("Only owner"); };
+        case null { return #err("Owner not set"); };
         };
+        khetPermissions.put(khetId, (allowedReadersList, allowedWritersList));
+        #ok(());
+    };
+
+    // NEW: Filtered khets query
+    public query({ caller }) func getKhetsByType(khetType: Text, includePrivate: Bool) : async [KhetMetadata] {
+        // permission check similar to getAllKhets...
+        let filtered = Array.filter(Iter.toArray(khets.vals()), func(k: KhetMetadata) : Bool {
+        k.khetType == khetType
+        });
+        filtered;
+    };
+
+    // NEW: delete + basic backup
+    public shared({ caller }) func deleteKhet(khetId: Text) : async () {
+        switch (owner) { 
+            case (?own) { 
+                if (caller == own) { 
+                    khets.delete(khetId); 
+                    pendingKhets.delete(khetId); 
+                }; 
+            }; 
+            case null {}; 
+        };
+    };
+
+    public shared({ caller }) func backupKhets() : async Text {
+        switch (owner) { 
+            case (?own) { 
+                if (caller == own) { 
+                    return debug_show(Iter.toArray(khets.entries())); 
+                } else {
+                    return "";   // or "Unauthorized" if you prefer
+                }; 
+            }; 
+            case null { 
+                return ""; 
+            }; 
+        };
+    };
+
+    // Cycle & storage exposure
+    public query func getCyclesBalance() : async Nat {
+        Cycles.balance();
+    };
+
+    public query func getStorageUsage() : async Nat {  // rough
+        // You can improve this with stable var size tracking if needed
+        0;
+    };
+
+    // Set username (only owner)
+    public shared({ caller }) func setUsername(newName: Text) : async Result.Result<(), Text> {
+        switch (owner) {
+        case (?own) {
+            if (caller != own) return #err("Only owner can set username");
+        };
+        case null { return #err("Owner not set"); };
+        };
+
+        // Call Cardinal to check uniqueness (you'll need to expose a checkUsername on Cardinal if not present)
+        let cardinal = actor("...") : actor { isUsernameTaken : (Text) -> async Bool }; /* cardinal canister id here ... or via import */
+        if (await cardinal.isUsernameTaken(newName)) {
+        return #err("Username already taken");
+        };
+
+        username := ?newName;
+        #ok(());
     };
 
     // Get username (query)

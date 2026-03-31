@@ -34,6 +34,19 @@ module {
     cycles     : Nat;
   };
 
+  public type PlayerData = {
+    principal         : Principal;
+    position          : Position;
+    signalingMessages : [(Principal, Text)];
+    lastUpdate        : Int;
+  };
+
+  public type Message = {
+    sender    : Text;
+    text      : Text;
+    timestamp : Int;
+  };
+
   public type AuditLogEntry = {
     timestamp : Int;
     user      : Principal;

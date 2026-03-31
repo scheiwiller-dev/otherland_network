@@ -12,9 +12,22 @@ import Text "mo:base/Text";
 import Nat "mo:base/Nat";
 import Int "mo:base/Int";
 import Time "mo:base/Time";
-import Debug "mo:base/Debug"
+import Debug "mo:base/Debug";
+
+import Types "types";
 
 persistent actor Cardinal {
+
+  // Types
+  type Position     = Types.Position;
+  type Size         = Types.Size;
+  type Scale        = Types.Scale;
+  type KhetMetadata = Types.KhetMetadata;
+  type PlayerData   = Types.PlayerData;
+  type Message      = Types.Message;
+  type NodeStatus   = Types.NodeStatus;
+  type Invitation    = Types.Invitation;
+  type AuditLogEntry  = Types.AuditLogEntry;
 
   // Stable variables for raw data
   var _adminPrincipal : Principal = Principal.fromText("fxhz4-w423j-q2chq-mcdn2-ihrcb-egwai-7eoh5-x4y76-3zzsk-4loyy-fqe");
@@ -26,6 +39,8 @@ persistent actor Cardinal {
   var invitationsEntries : [(Text, Invitation)] = [];
   var invitationCounter : Nat = 0;
   var nodeVisibilityEntries : [(Principal, Bool)] = [];
+  var blockedUsersEntries : [(Principal, ())] = [];
+  var auditLogEntries : [Types.AuditLogEntry] = [];
 
   // In-memory HashMaps reconstructed from stable data
   transient var registry = HashMap.fromIter<Principal, Principal>(
@@ -63,12 +78,11 @@ persistent actor Cardinal {
     Principal.equal,
     Principal.hash
   );
+  transient var blockedUsers = HashMap.fromIter<Principal, ()>(
+    blockedUsersEntries.vals(), 10, Principal.equal, Principal.hash
+  );
+  transient var auditLog = Buffer.Buffer<Types.AuditLogEntry>(50);
   
-  type Invitation = {
-      inviter: Principal;
-      expiration: Int;
-  };
-
   // Upgrade hooks to save and restore HashMap data
   system func preupgrade() {
     registryEntries := Iter.toArray(registry.entries());
@@ -83,6 +97,12 @@ persistent actor Cardinal {
     friendListsEntries := Iter.toArray(friendLists.entries());
     invitationsEntries := Iter.toArray(invitations.entries());
     nodeVisibilityEntries := Iter.toArray(nodeVisibility.entries());
+    blockedUsersEntries := Iter.toArray(
+      Iter.map<Principal, (Principal, ())>(blockedUsers.keys(), func(p : Principal) : (Principal, ()) {
+        (p, ())
+      })
+    );
+    auditLogEntries := Iter.toArray(auditLog.vals());
   };
 
   system func postupgrade() {
@@ -121,6 +141,72 @@ persistent actor Cardinal {
       Principal.equal,
       Principal.hash
     );
+    blockedUsers := HashMap.fromIter<Principal, ()>(
+      blockedUsersEntries.vals(), 
+      10, 
+      Principal.equal, 
+      Principal.hash
+    );
+    auditLog := Buffer.fromIter<AuditLogEntry>(auditLogEntries.vals());
+  };
+
+  // NEW: Admin functions
+  public shared({ caller }) func setAdmin(newAdmin: Principal) : async () {
+    if (caller != _adminPrincipal) return;
+    _adminPrincipal := newAdmin;
+    _logAudit(caller, "setAdmin", "New admin set");
+  };
+
+  public shared({ caller }) func getAllRegisteredUsers() : async [(Principal, Principal)] {  // user -> node canister
+    if (caller != _adminPrincipal) return [];
+    Iter.toArray(registry.entries());
+  };
+
+  public shared({ caller }) func getNodeStatus(user: Principal) : async ?Types.NodeStatus {
+    if (caller != _adminPrincipal and caller != user) return null;
+    switch (registry.get(user)) {
+      case (?canisterId) {
+        let isPublic = Option.get(nodeVisibility.get(user), false);
+        let nodeActor = actor(Principal.toText(canisterId)) : actor { getCyclesBalance : () -> async Nat };
+        let cycles = try { await nodeActor.getCyclesBalance() } catch (_) { 0 };
+        ?{ canisterId; isPublic; cycles };
+      };
+      case null { null };
+    };
+  };
+
+  public shared({ caller }) func topUpNodeCycles(user: Principal, amount: Nat) : async () {
+    if (caller != _adminPrincipal) return;
+    switch (registry.get(user)) {
+      case (?canisterId) {
+        Cycles.add(amount);
+        let _ = await (actor(Principal.toText(canisterId)) : actor { acceptCycles : () -> async () }).acceptCycles();
+        _logAudit(caller, "topUpNodeCycles", "Topped up " # Nat.toText(amount) # " for " # Principal.toText(user));
+      };
+      case null {};
+    };
+  };
+
+  public shared({ caller }) func blockUser(user: Principal, block: Bool) : async () {
+    if (caller != _adminPrincipal) return;
+    if (block) {
+      blockedUsers.put(user, ());
+    } else {
+      blockedUsers.delete(user);
+    };
+    _logAudit(caller, "blockUser", Principal.toText(user) # " blocked=" # debug_show(block));
+  };
+
+  public query func isBlocked(user: Principal) : async Bool {
+    Option.isSome(blockedUsers.get(user));
+  };
+
+  // Friend helper (cross-cutting recommendation)
+  public query func isFriendWith(userA: Principal, userB: Principal) : async Bool {
+    switch (friendLists.get(userA)) {
+      case (?friends) { Array.find(friends, func(f: Principal) : Bool { f == userB }) != null };
+      case null { false };
+    };
   };
 
   // Friend List Management
@@ -204,6 +290,31 @@ persistent actor Cardinal {
               return #ok(());
           };
       };
+  };
+
+  // NEW: cancelInvitation and getPendingInvitations
+  public shared({ caller }) func cancelInvitation(token: Text) : async Result.Result<(), Text> {
+    switch (invitations.get(token)) {
+      case (?inv) {
+        if (inv.inviter == caller) {
+          invitations.delete(token);
+          return #ok(());
+        } else { return #err("Not the inviter"); };
+      };
+      case null { #err("Invalid token"); };
+    };
+  };
+
+  public query({ caller }) func getPendingInvitations() : async [(Text, Invitation)] {
+    Iter.toArray(Iter.filter(invitations.entries(), func((_, inv): (Text, Invitation)) : Bool {
+      inv.inviter == caller
+    }));
+  };
+
+  // Internal helper
+  private func _logAudit(user: Principal, action: Text, details: Text) {
+    auditLog.add({ timestamp = Time.now(); user; action; details });
+    if (auditLog.size() > 50) { ignore auditLog.remove(0); };
   };
 
   // Node Visibility Management
