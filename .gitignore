@@ -13,3 +13,4 @@ src/declarations/
 !.env
 !README.md
 .vscode
+.mops
