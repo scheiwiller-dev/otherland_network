@@ -16,6 +16,8 @@ import Types "types";
 
 persistent actor UserNode {
 
+    let cardinalId = Principal.fromText("uxrrr-q7777-77774-qaaaq-cai");
+
     // Types
     type Position     = Types.Position;
     type Size         = Types.Size;
@@ -510,14 +512,20 @@ persistent actor UserNode {
         case null { return #err("Owner not set"); };
         };
 
-        // Call Cardinal to check uniqueness (you'll need to expose a checkUsername on Cardinal if not present)
-        let cardinal = actor("...") : actor { isUsernameTaken : (Text) -> async Bool }; /* cardinal canister id here ... or via import */
+        // Call Cardinal to check uniqueness
+        let cardinal = actor(Principal.toText(cardinalId)) : actor {
+            isUsernameTaken : (Text) -> async Bool;
+            registerUsername : (Text) -> async Result.Result<(), Text>;
+        };
         if (await cardinal.isUsernameTaken(newName)) {
-        return #err("Username already taken");
+            return #err("Username already taken");
         };
 
         username := ?newName;
-        #ok(());
+        switch (await cardinal.registerUsername(newName)) {
+            case (#ok(())) { #ok(()) };
+            case (#err(msg)) { #err("Failed to register username: " # msg) };
+        };
     };
 
     // Get username (query)

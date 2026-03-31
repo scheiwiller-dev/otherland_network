@@ -48,6 +48,7 @@ persistent actor Cardinal {
   var nodeVisibilityEntries : [(Principal, Bool)] = [];
   var blockedUsersEntries : [(Principal, ())] = [];
   var auditLogEntries : [Types.AuditLogEntry] = [];
+  var usernameEntries : [(Text, Principal)] = [];
 
   // In-memory HashMaps reconstructed from stable data
   transient var registry = Map.fromIter<Principal, Principal>(
@@ -79,6 +80,9 @@ persistent actor Cardinal {
     blockedUsersEntries.vals(), principalCompare
   );
   transient var auditLog : [Types.AuditLogEntry] = [];
+  transient var usernames = Map.fromIter<Text, Principal>(
+    usernameEntries.vals(), Text.compare
+  );
   
   // Upgrade hooks to save and restore HashMap data
   system func preupgrade() {
@@ -100,6 +104,7 @@ persistent actor Cardinal {
       })
     );
     auditLogEntries := auditLog;
+    usernameEntries := Iter.toArray(usernames.entries());
   };
 
   system func postupgrade() {
@@ -129,10 +134,14 @@ persistent actor Cardinal {
       principalCompare
     );
     blockedUsers := Map.fromIter<Principal, ()>(
-      blockedUsersEntries.vals(), 
+      blockedUsersEntries.vals(),
       principalCompare
     );
     auditLog := auditLogEntries;
+    usernames := Map.fromIter<Text, Principal>(
+      usernameEntries.vals(),
+      Text.compare
+    );
   };
 
   // NEW: Admin functions
@@ -521,5 +530,26 @@ persistent actor Cardinal {
         return #err("No canister found for this user.");
       };
     };
+  };
+
+  // Username management
+  public query func isUsernameTaken(name: Text) : async Bool {
+    Option.isSome(usernames.get(Text.compare, name))
+  };
+
+  public shared({ caller }) func registerUsername(name: Text) : async Result.Result<(), Text> {
+    if (Option.isSome(usernames.get(Text.compare, name))) {
+      return #err("Username already taken");
+    };
+    usernames.add(Text.compare, name, caller);
+    _logAudit(caller, "registerUsername", "Registered username: " # name);
+    #ok(())
+  };
+
+  public query func getUsername(user: Principal) : async ?Text {
+    for ((name, u) in usernames.entries()) {
+      if (u == user) return ?name;
+    };
+    null
   };
 };
