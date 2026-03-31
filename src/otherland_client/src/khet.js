@@ -16,7 +16,7 @@ import { online } from './peermesh.js';
 import { updateKhetTable } from './menu.js';
 import { viewerState } from './index.js';
 
-let agentInstance = null;
+let userNodeAgentInstance = null;
 let userNodeActor = null;
 
 // Get user node actor for the current user's node

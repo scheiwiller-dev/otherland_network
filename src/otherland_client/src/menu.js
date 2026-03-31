@@ -521,8 +521,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const requestCanisterBtn = document.getElementById("request-new-canister");
     requestCanisterBtn.addEventListener('click', async () => {
         const userNodeId = await requestNewCanister();
-        nodeSettings.userOwnedNodes.push(userNodeId);
-        nodeSettings.availableNodes.push(userNodeId);
+        nodeSettings.availableNodes = await getAccessibleCanisters();
         await updateNodeList();
     });
 
