@@ -2,7 +2,7 @@
 import { Principal } from '@dfinity/principal';
 import { viewerState, sceneObjects, worldController, animationMixers, khetState } from './index.js';
 import { khetController, clearAllKhets, getUserNodeActor } from './khet.js';
-import { nodeSettings, requestNewCanister, getAccessibleCanisters, getCardinalActor } from './nodeManager.js';
+import { nodeSettings, requestNewCanister, refreshNodeList, getAccessibleCanisters, getCardinalActor } from './nodeManager.js';
 import { initAuth, getIdentity, login, user } from './user.js';
 import { chat } from './chat.js';
 import { online } from './peermesh.js'
@@ -330,72 +330,6 @@ export async function updateKhetTable() {
     return;
 }
 
-// Update Node List
-export async function updateNodeList() {
-
-    // Select the table
-    const table = document.querySelector('#node-table');
-            
-    // Clear existing data rows (keep the header row)
-    const rows = table.querySelectorAll('tr');
-    for (let i = 1; i < rows.length; i++) {
-        rows[i].remove();
-    }
-
-    // Get the user's principal
-    const userPrincipal = user.getUserPrincipal();
-
-    // Populate the table with Node data
-    const nodes = nodeSettings.availableNodes;
-    if (nodes.length > 0) {
-        document.getElementById("node-table").style.display = "block";
-        for (const node of nodes) {
-            const tr = document.createElement('tr');
-
-            // Highlight the row if the owner is the current user
-            if (node.owner === userPrincipal) {
-                tr.style.color = "#00d4ff";
-            }
-            
-            // NodeID column
-            const tdId = document.createElement('td');
-            tdId.textContent = node.canisterId;
-            tr.appendChild(tdId);
-            
-            // Owner column
-            const tdOwner = document.createElement('td');
-            tdOwner.textContent = node.owner + (node.isPublic ? " (Public)" : " (Private)");
-            tr.appendChild(tdOwner);
-            
-            // Connect column
-            const tdConnect = document.createElement('td');
-            const connectNodeBtn = document.createElement('button');
-            connectNodeBtn.textContent = "Connect";
-            connectNodeBtn.addEventListener('click', async () => {
-
-                // Switch Node Type
-                document.getElementById("enter-node-btn").style.display = "block";
-                if (node.owner === userPrincipal) {
-                
-                    await nodeSettings.changeNode({type: 2, id: node.canisterId})
-                    document.getElementById("edit-node-btn").style.display = "block";
-                    document.getElementById("node-settings-btn").style.display = "block";
-                } else {
-                    await nodeSettings.changeNode({type: 3, id: node.canisterId})
-                }
-            });
-            tdConnect.appendChild(connectNodeBtn);
-            tr.appendChild(tdConnect);
-            
-            // Append the row to the table
-            table.appendChild(tr);
-        }
-    } else {
-        document.getElementById("node-table").style.display = "none";
-    }
-    return;
-}
-
 // Open / Close KhetEditor
 function changekhetEditorDrawer(goal) {
     if (goal == "open") {
@@ -428,7 +362,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Unified account switcher - handles Guest and II-logged-in states with action buttons
     function updateAccountSwitcher(isGuest = false) {
         document.getElementById("info-box").style.display = 'block';
-        const accountSwitcher = document.getElementById('account-switcher');
         accountSwitcher.innerHTML = '';
 
         const container = document.createElement('div');
@@ -495,17 +428,9 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // **Otherland Tab**
     // Connect to Cardinal
-    const cardinalConnectBtn = document.getElementById("cardinal-connect-btn");
-    cardinalConnectBtn.addEventListener('click', async () => {
-        
-        // Get Node List
-        nodeSettings.availableNodes = await getAccessibleCanisters()
-        
-        console.log(nodeSettings.availableNodes);
-        await updateNodeList();
-        await updateFriendsList();
-        document.getElementById("node-list").style.display = "block";
-        cardinalConnectBtn.innerHTML = "Refresh Node List";
+    const refreshNodeListBtn = document.getElementById("refresh-node-list-btn");
+    refreshNodeListBtn.addEventListener('click', async () => {
+        refreshNodeList();
     });
 
     // Enter Node World
@@ -520,9 +445,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Create new user node
     const requestCanisterBtn = document.getElementById("request-new-canister");
     requestCanisterBtn.addEventListener('click', async () => {
-        const userNodeId = await requestNewCanister();
+        await requestNewCanister();
         nodeSettings.availableNodes = await getAccessibleCanisters();
-        await updateNodeList();
+        await refreshNodeList();
     });
 
     // Setup Username Page
@@ -919,6 +844,12 @@ document.addEventListener('DOMContentLoaded', async () => {
         tabs.forEach(tab => {
             tab.style.display = tab.id === tabId ? 'block' : 'none';
         });
+        switch (tabId) {
+            case 'otherland-tab':
+                refreshNodeList();
+                updateFriendsList();
+                break;
+        }
     }
 
     // Initially, show the start screen

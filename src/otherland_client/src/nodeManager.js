@@ -86,6 +86,77 @@ export async function getAccessibleCanisters() {
     }
 }
 
+// Refresh Node List
+export async function refreshNodeList() {
+    
+    // Get updated list of accessible canisters and update nodeSettings
+    nodeSettings.availableNodes = await getAccessibleCanisters()
+    console.log(nodeSettings.availableNodes);
+
+    // Select the table
+    const table = document.querySelector('#node-table');
+            
+    // Clear existing data rows (keep the header row)
+    const rows = table.querySelectorAll('tr');
+    for (let i = 1; i < rows.length; i++) {
+        rows[i].remove();
+    }
+
+    // Get the user's principal
+    const userPrincipal = user.getUserPrincipal();
+
+    // Populate the table with Node data
+    const nodes = nodeSettings.availableNodes;
+    if (nodes.length > 0) {
+        document.getElementById("node-table").style.display = "block";
+        for (const node of nodes) {
+            const tr = document.createElement('tr');
+
+            // Highlight the row if the owner is the current user
+            if (node.owner === userPrincipal) {
+                tr.style.color = "#00d4ff";
+            }
+            
+            // NodeID column
+            const tdId = document.createElement('td');
+            tdId.textContent = node.canisterId;
+            tr.appendChild(tdId);
+            
+            // Owner column
+            const tdOwner = document.createElement('td');
+            tdOwner.textContent = node.owner + (node.isPublic ? " (Public)" : " (Private)");
+            tr.appendChild(tdOwner);
+            
+            // Connect column
+            const tdConnect = document.createElement('td');
+            const connectNodeBtn = document.createElement('button');
+            connectNodeBtn.textContent = "Connect";
+            connectNodeBtn.addEventListener('click', async () => {
+
+                // Switch Node Type
+                document.getElementById("enter-node-btn").style.display = "block";
+                if (node.owner === userPrincipal) {
+                
+                    await nodeSettings.changeNode({type: 2, id: node.canisterId})
+                    document.getElementById("edit-node-btn").style.display = "block";
+                    document.getElementById("node-settings-btn").style.display = "block";
+                } else {
+                    await nodeSettings.changeNode({type: 3, id: node.canisterId})
+                }
+            });
+            tdConnect.appendChild(connectNodeBtn);
+            tr.appendChild(tdConnect);
+            
+            // Append the row to the table
+            table.appendChild(tr);
+        }
+    } else {
+        document.getElementById("node-table").style.display = "none";
+    }
+    document.getElementById("node-list").style.display = "block";
+    return;
+}
+
 // Request new canister creation by Cardinal
 export async function requestNewCanister() {
     try {
