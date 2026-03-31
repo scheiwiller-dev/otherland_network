@@ -179,8 +179,7 @@ persistent actor Cardinal {
     if (caller != _adminPrincipal) return;
     switch (registry.get(user)) {
       case (?canisterId) {
-        Cycles.add(amount);
-        let _ = await (actor(Principal.toText(canisterId)) : actor { acceptCycles : () -> async () }).acceptCycles();
+        await (with cycles = amount) (actor(Principal.toText(canisterId)) : actor { acceptCycles : () -> async () }).acceptCycles();
         _logAudit(caller, "topUpNodeCycles", "Topped up " # Nat.toText(amount) # " for " # Principal.toText(user));
       };
       case null {};

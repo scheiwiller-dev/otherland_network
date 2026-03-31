@@ -10,7 +10,6 @@ import Result "mo:base/Result";
 import Time "mo:base/Time";
 import Order "mo:base/Order";
 import Float "mo:base/Float";
-import Int "mo:base/Int";
 import Cycles "mo:base/ExperimentalCycles";
 
 import Types "types";
@@ -77,7 +76,7 @@ persistent actor UserNode {
     };
 
     // **Initialization by Cardinal**
-    public shared ({ caller }) func init(ownerPrincipal : Principal) : async () {
+    public shared ({ caller = _ }) func init(ownerPrincipal : Principal) : async () {
         // Allow the caller (cardinal) to initialize this freshly installed canister
         assert (Option.isNull(owner));  // Prevent re-initialization
         owner := ?ownerPrincipal;
@@ -450,7 +449,7 @@ persistent actor UserNode {
     };
 
     // NEW: Filtered khets query
-    public query({ caller }) func getKhetsByType(khetType: Text, includePrivate: Bool) : async [KhetMetadata] {
+    public query({ caller = _ }) func getKhetsByType(khetType: Text, _includePrivate: Bool) : async [KhetMetadata] {
         // permission check similar to getAllKhets...
         let filtered = Array.filter(Iter.toArray(khets.vals()), func(k: KhetMetadata) : Bool {
         k.khetType == khetType
