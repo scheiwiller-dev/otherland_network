@@ -1,16 +1,16 @@
-import Principal "mo:base/Principal";
-import HashMap "mo:base/HashMap";
-import Option "mo:base/Option";
-import Nat "mo:base/Nat";
-import Iter "mo:base/Iter";
-import Text "mo:base/Text";
-import Blob "mo:base/Blob";
-import Array "mo:base/Array";
-import Result "mo:base/Result";
-import Time "mo:base/Time";
-import Order "mo:base/Order";
-import Float "mo:base/Float";
-import Cycles "mo:base/ExperimentalCycles";
+import Principal "mo:core/Principal";
+import Map "mo:core/Map";
+import Option "mo:core/Option";
+import Nat "mo:core/Nat";
+import Iter "mo:core/Iter";
+import Text "mo:core/Text";
+import Blob "mo:core/Blob";
+import Array "mo:core/Array";
+import Result "mo:core/Result";
+import Time "mo:core/Time";
+import Order "mo:core/Order";
+import Float "mo:core/Float";
+import Cycles "mo:core/Cycles";
 
 import Types "types";
 
@@ -23,6 +23,12 @@ persistent actor UserNode {
     type KhetMetadata = Types.KhetMetadata;
     type PlayerData   = Types.PlayerData;
     type Message      = Types.Message;
+
+    // Compare functions for Map
+    func principalCompare(a : Principal, b : Principal) : Order.Order {
+      Text.compare(Principal.toText(a), Principal.toText(b))
+    };
+
 
     // **Stable Variables**
     var owner : ?Principal = null;
@@ -39,15 +45,15 @@ persistent actor UserNode {
     var username: ?Text = null;
 
     // **In-Memory HashMaps**
-    transient var allowedReaders = HashMap.fromIter<Principal, ()>(allowedReadersEntries.vals(), 10, Principal.equal, Principal.hash);
-    transient var allowedWriters = HashMap.fromIter<Principal, ()>(allowedWritersEntries.vals(), 10, Principal.equal, Principal.hash);
-    transient var khets = HashMap.fromIter<Text, KhetMetadata>(khetStore.vals(), 10, Text.equal, Text.hash);
-    transient var khetPermissions = HashMap.fromIter<Text, ([Principal], [Principal])>(khetPermissionsEntries.vals(), 10, Text.equal, Text.hash);
-    transient var pendingKhets = HashMap.fromIter<Text, KhetMetadata>(pendingKhetStore.vals(), 10, Text.equal, Text.hash);
-    transient var hashToBlobId = HashMap.fromIter<Text, (Text, Bool)>(hashToBlobIdStore.vals(), 10, Text.equal, Text.hash);
-    transient var blobStore = HashMap.HashMap<Text, [(Nat, Blob)]>(10, Text.equal, Text.hash);
-    transient var blobMetaStore = HashMap.HashMap<Text, Nat>(10, Text.equal, Text.hash);
-    transient var players = HashMap.fromIter<Principal, PlayerData>(playerStore.vals(), 10, Principal.equal, Principal.hash);
+    transient var allowedReaders = Map.fromIter<Principal, ()>(allowedReadersEntries.vals(), principalCompare);
+    transient var allowedWriters = Map.fromIter<Principal, ()>(allowedWritersEntries.vals(), principalCompare);
+    transient var khets = Map.fromIter<Text, KhetMetadata>(khetStore.vals(), Text.compare);
+    transient var khetPermissions = Map.fromIter<Text, ([Principal], [Principal])>(khetPermissionsEntries.vals(), Text.compare);
+    transient var pendingKhets = Map.fromIter<Text, KhetMetadata>(pendingKhetStore.vals(), Text.compare);
+    transient var hashToBlobId = Map.fromIter<Text, (Text, Bool)>(hashToBlobIdStore.vals(), Text.compare);
+    transient var blobStore = Map.empty<Text, [(Nat, Blob)]>();
+    transient var blobMetaStore = Map.empty<Text, Nat>();
+    transient var players = Map.fromIter<Principal, PlayerData>(playerStore.vals(), principalCompare);
 
     transient let MAX_MESSAGES = 100;
 
@@ -65,14 +71,14 @@ persistent actor UserNode {
     };
 
     system func postupgrade() {
-        allowedReaders := HashMap.fromIter<Principal, ()>(allowedReadersEntries.vals(), 10, Principal.equal, Principal.hash);
-        khets := HashMap.fromIter<Text, KhetMetadata>(khetStore.vals(), 10, Text.equal, Text.hash);
-        pendingKhets := HashMap.fromIter<Text, KhetMetadata>(pendingKhetStore.vals(), 10, Text.equal, Text.hash);
-        hashToBlobId := HashMap.fromIter<Text, (Text, Bool)>(hashToBlobIdStore.vals(), 10, Text.equal, Text.hash);
-        blobStore := HashMap.fromIter<Text, [(Nat, Blob)]>(blobStoreStable.vals(), 10, Text.equal, Text.hash); // Restore chunks
-        blobMetaStore := HashMap.fromIter<Text, Nat>(blobMetaStoreStable.vals(), 10, Text.equal, Text.hash); // Restore metadata
-        khetPermissions := HashMap.fromIter<Text, ([Principal], [Principal])>(khetPermissionsEntries.vals(), 10, Text.equal, Text.hash);
-        players := HashMap.fromIter<Principal, PlayerData>(playerStore.vals(), 10, Principal.equal, Principal.hash);
+        allowedReaders := Map.fromIter<Principal, ()>(allowedReadersEntries.vals(), principalCompare);
+        khets := Map.fromIter<Text, KhetMetadata>(khetStore.vals(), Text.compare);
+        pendingKhets := Map.fromIter<Text, KhetMetadata>(pendingKhetStore.vals(), Text.compare);
+        hashToBlobId := Map.fromIter<Text, (Text, Bool)>(hashToBlobIdStore.vals(), Text.compare);
+        blobStore := Map.fromIter<Text, [(Nat, Blob)]>(blobStoreStable.vals(), Text.compare); // Restore chunks
+        blobMetaStore := Map.fromIter<Text, Nat>(blobMetaStoreStable.vals(), Text.compare); // Restore metadata
+        khetPermissions := Map.fromIter<Text, ([Principal], [Principal])>(khetPermissionsEntries.vals(), Text.compare);
+        players := Map.fromIter<Principal, PlayerData>(playerStore.vals(), principalCompare);
     };
 
     // **Initialization by Cardinal**
@@ -80,24 +86,24 @@ persistent actor UserNode {
         // Allow the caller (cardinal) to initialize this freshly installed canister
         assert (Option.isNull(owner));  // Prevent re-initialization
         owner := ?ownerPrincipal;
-        allowedReaders.put(ownerPrincipal, ()); // Owner is always allowed
+        allowedReaders.add(principalCompare, ownerPrincipal, ()); // Owner is always allowed
     };
 
     // Grant/revoke functions for better access control management
     public shared({ caller }) func grantReadAccess(user: Principal) : async () {
-        switch (owner) { case (?own) { if (caller == own) allowedReaders.put(user, ()); }; case null {}; };
+        switch (owner) { case (?own) { if (caller == own) allowedReaders.add(principalCompare, user, ()); }; case null {}; };
     };
 
     public shared({ caller }) func revokeReadAccess(user: Principal) : async () {
-        switch (owner) { case (?own) { if (caller == own) allowedReaders.delete(user); }; case null {}; };
+        switch (owner) { case (?own) { if (caller == own) allowedReaders.remove(principalCompare, user); }; case null {}; };
     };
 
     public shared({ caller }) func grantWriteAccess(user: Principal) : async () {
-        switch (owner) { case (?own) { if (caller == own) allowedWriters.put(user, ()); }; case null {}; };
+        switch (owner) { case (?own) { if (caller == own) allowedWriters.add(principalCompare, user, ()); }; case null {}; };
     };
 
     public shared({ caller }) func revokeWriteAccess(user: Principal) : async () {
-        switch (owner) { case (?own) { if (caller == own) allowedWriters.delete(user); }; case null {}; };
+        switch (owner) { case (?own) { if (caller == own) allowedWriters.remove(principalCompare, user); }; case null {}; };
     };
 
     // **Upload Functions**
@@ -105,24 +111,24 @@ persistent actor UserNode {
         switch (owner) {
             case (?own) {
                 assert (caller == own);
-                let existing = hashToBlobId.get(khetMetadata.hash);
+                let existing = hashToBlobId.get(Text.compare, khetMetadata.hash);
                 switch (existing) {
                     case (?(blobId, true)) {
                         let gltfDataRef = (Principal.fromActor(UserNode), blobId, khetMetadata.gltfDataSize);
                         let updatedKhet = {
                             khetMetadata with gltfDataRef = ?gltfDataRef
                         };
-                        khets.put(khetMetadata.khetId, updatedKhet);
+                        khets.add(Text.compare, khetMetadata.khetId, updatedKhet);
                         return #existing(blobId);
                     };
                     case (_) {
                         let newBlobId = khetMetadata.khetId; // Using khetId as blobId for simplicity
-                        hashToBlobId.put(khetMetadata.hash, (newBlobId, false));
+                        hashToBlobId.add(Text.compare, khetMetadata.hash, (newBlobId, false));
                         let gltfDataRef = (Principal.fromActor(UserNode), newBlobId, khetMetadata.gltfDataSize);
                         let updatedKhet = {
                             khetMetadata with gltfDataRef = ?gltfDataRef
                         };
-                        pendingKhets.put(khetMetadata.khetId, updatedKhet);
+                        pendingKhets.add(Text.compare, khetMetadata.khetId, updatedKhet);
                         return #new(newBlobId);
                     };
                 };
@@ -138,7 +144,7 @@ persistent actor UserNode {
         switch (owner) {
             case (?own) {
                 assert (caller == own);
-                let khetOpt = pendingKhets.get(khetId);
+                let khetOpt = pendingKhets.get(Text.compare, khetId);
                 switch (khetOpt) {
                     case (null) { return ?"Khet not found in pending store" };
                     case (?khet) {
@@ -151,11 +157,11 @@ persistent actor UserNode {
                                 switch (finalizeResult) {
                                     case (?error) { return ?error };
                                     case (null) {
-                                        khets.put(khet.khetId, khet);
-                                        pendingKhets.delete(khet.khetId);
-                                        switch (hashToBlobId.get(khet.hash)) {
+                                        khets.add(Text.compare, khet.khetId, khet);
+                                        pendingKhets.remove(Text.compare, khet.khetId);
+                                        switch (hashToBlobId.get(Text.compare, khet.hash)) {
                                             case (?(existingBlobId, _)) {
-                                                hashToBlobId.put(khet.hash, (existingBlobId, true));
+                                                hashToBlobId.add(Text.compare, khet.hash, (existingBlobId, true));
                                             };
                                             case (null) {};
                                         };
@@ -175,7 +181,7 @@ persistent actor UserNode {
         switch (owner) {
             case (?own) {
                 assert (caller == own);
-                pendingKhets.delete(khetId);
+                pendingKhets.remove(Text.compare, khetId);
             };
             case null {
                 assert (false);
@@ -187,8 +193,8 @@ persistent actor UserNode {
     public query ({ caller }) func getKhet(khetId : Text) : async ?KhetMetadata {
         switch (owner) {
             case (?own) {
-                if (caller == own or Option.isSome(allowedReaders.get(caller))) {
-                    return khets.get(khetId);
+                if (caller == own or Option.isSome(allowedReaders.get(principalCompare, caller))) {
+                    return khets.get(Text.compare, khetId);
                 };
                 return null;
             };
@@ -201,8 +207,8 @@ persistent actor UserNode {
     public query ({ caller }) func getAllKhets() : async [KhetMetadata] {
         switch (owner) {
             case (?own) {
-                if (caller == own or Option.isSome(allowedReaders.get(caller))) {
-                    return Iter.toArray(khets.vals());
+                if (caller == own or Option.isSome(allowedReaders.get(principalCompare, caller))) {
+                    return Iter.toArray(Iter.map(khets.entries(), func((k,v)) { v }));
                 };
                 return [];
             };
@@ -215,7 +221,7 @@ persistent actor UserNode {
     public query ({ caller }) func getSceneObjectKhets() : async [KhetMetadata] {
         switch (owner) {
             case (?own) {
-                if (caller == own or Option.isSome(allowedReaders.get(caller))) {
+                if (caller == own or Option.isSome(allowedReaders.get(principalCompare, caller))) {
                     let allKhets = Iter.toArray(khets.entries());
                     let filtered = Array.filter<(Text, KhetMetadata)>(
                         allKhets,
@@ -241,10 +247,10 @@ persistent actor UserNode {
                 // Cardinal (the factory canister) is also allowed to call this during initial setup.
                 // This pattern removes any hardcoded principal.
                 if (caller == own) {
-                    allowedReaders.put(reader, ());
+                    allowedReaders.add(principalCompare, reader, ());
                 } else {
                     // Allow cardinal during creation flow
-                    allowedReaders.put(reader, ());
+                    allowedReaders.add(principalCompare, reader, ());
                 };
             };
             case null {
@@ -257,7 +263,7 @@ persistent actor UserNode {
         switch (owner) {
             case (?own) {
                 assert (caller == own);
-                allowedReaders.delete(reader);
+                allowedReaders.remove(principalCompare, reader);
             };
             case null {
                 assert (false);
@@ -269,8 +275,8 @@ persistent actor UserNode {
         switch (owner) {
             case (?own) {
                 assert (caller == own); // Only the owner can delete
-                khets.delete(khetId);   // Remove from the khets HashMap
-                pendingKhets.delete(khetId); // Clean up any pending Khet with this ID
+                khets.remove(Text.compare, khetId);   // Remove from the khets HashMap
+                pendingKhets.remove(Text.compare, khetId); // Clean up any pending Khet with this ID
             };
             case null {
                 assert (false); // Should not happen post-initialization
@@ -282,9 +288,9 @@ persistent actor UserNode {
         switch (owner) {
             case (?own) {
                 assert (caller == own);
-                khets := HashMap.HashMap<Text, KhetMetadata>(10, Text.equal, Text.hash);
-                pendingKhets := HashMap.HashMap<Text, KhetMetadata>(10, Text.equal, Text.hash);
-                hashToBlobId := HashMap.HashMap<Text, (Text, Bool)>(10, Text.equal, Text.hash);
+                khets := Map.empty<Text, KhetMetadata>();
+                pendingKhets := Map.empty<Text, KhetMetadata>();
+                hashToBlobId := Map.empty<Text, (Text, Bool)>();
             };
             case null {
                 assert (false);
@@ -294,14 +300,14 @@ persistent actor UserNode {
 
     // Store a chunk of a blob's data
     public func storeBlobChunk(blobId : Text, chunkIndex : Nat, chunkData : Blob) : async () {
-        let existingChunks = Option.get(blobStore.get(blobId), []); // Get existing chunks or empty array
-        let newChunks = Array.append(existingChunks, [(chunkIndex, chunkData)]); // Append new chunk
-        blobStore.put(blobId, newChunks); // Update blob storage
+        let existingChunks = Option.get(blobStore.get(Text.compare, blobId), []); // Get existing chunks or empty array
+        let newChunks = Array.tabulate(existingChunks.size() + 1, func(i) : (Nat, Blob) = if (i < existingChunks.size()) existingChunks[i] else (chunkIndex, chunkData)); // Append new chunk
+        blobStore.add(Text.compare, blobId, newChunks); // Update blob storage
     };
 
     // Finalize a blob by verifying chunk count and recording its total size
     public func finalizeBlob(blobId : Text, totalSize : Nat, totalChunks : Nat) : async ?Text {
-        switch (blobStore.get(blobId)) {
+        switch (blobStore.get(Text.compare, blobId)) {
             case (null) {
                 return ?("No chunks found for blobId: " # blobId); // Error if no chunks exist
             };
@@ -309,7 +315,7 @@ persistent actor UserNode {
                 if (chunks.size() != totalChunks) {
                     return ?("Missing chunks for blobId: " # blobId # ". Expected " # Nat.toText(totalChunks) # ", got " # Nat.toText(chunks.size()));
                 };
-                blobMetaStore.put(blobId, totalSize); // Record total size
+                blobMetaStore.add(Text.compare, blobId, totalSize); // Record total size
                 return null; // Success
             };
         };
@@ -317,7 +323,7 @@ persistent actor UserNode {
 
     // Query function to retrieve a specific chunk of a blob
     public query func getBlobChunk(blobId : Text, chunkIndex : Nat) : async ?Blob {
-        switch (blobStore.get(blobId)) {
+        switch (blobStore.get(Text.compare, blobId)) {
             case (null) { null }; // No blob found
             case (?chunks) {
                 let chunkOpt = Array.find<(Nat, Blob)>(chunks, func(chunk) { chunk.0 == chunkIndex });
@@ -331,19 +337,19 @@ persistent actor UserNode {
 
     // Query function to get the total size of a blob
     public query func getBlobSize(blobId : Text) : async ?Nat {
-        blobMetaStore.get(blobId) // Return size if found, otherwise null
+        blobMetaStore.get(Text.compare, blobId) // Return size if found, otherwise null
     };
 
     // Delete a blob and its metadata
     public func deleteBlob(blobId : Text) : async () {
-        blobStore.delete(blobId); // Remove chunks
-        blobMetaStore.delete(blobId); // Remove metadata
+        blobStore.remove(Text.compare, blobId); // Remove chunks
+        blobMetaStore.remove(Text.compare, blobId); // Remove metadata
     };
 
     // Clear all blobs and metadata from storage
     public func clearBlobs() : async () {
-        blobStore := HashMap.HashMap<Text, [(Nat, Blob)]>(10, Text.equal, Text.hash); // Reset chunk storage
-        blobMetaStore := HashMap.HashMap<Text, Nat>(10, Text.equal, Text.hash); // Reset metadata storage
+        blobStore := Map.empty<Text, [(Nat, Blob)]>(); // Reset chunk storage
+        blobMetaStore := Map.empty<Text, Nat>(); // Reset metadata storage
     };
 
     // Join Session: Register a player
@@ -354,18 +360,18 @@ persistent actor UserNode {
             signalingMessages = [];
             lastUpdate = Time.now();
         };
-        players.put(caller, playerData);
+        players.add(principalCompare, caller, playerData);
         return caller;
     };
 
     // Leave Session: Remove a player
     public shared ({ caller }) func leaveSession() : async () {
-        players.delete(caller);
+        players.remove(principalCompare, caller);
     };
 
     // Update Position: Receive player positions
     public shared ({ caller }) func updatePosition(pos: Position) : async () {
-        switch (players.get(caller)) {
+        switch (players.get(principalCompare, caller)) {
             case (?player) {
                 let updatedPlayer = {
                     principal = player.principal;
@@ -373,7 +379,7 @@ persistent actor UserNode {
                     signalingMessages = player.signalingMessages;
                     lastUpdate = Time.now();
                 };
-                players.put(caller, updatedPlayer);
+                players.add(principalCompare, caller, updatedPlayer);
             };
             case null {};
         };
@@ -381,7 +387,7 @@ persistent actor UserNode {
 
     // Get All Player Positions: Query positions
     public query ({ caller }) func getAllPlayerPositions() : async [(Principal, Position)] {
-        if (Option.isSome(allowedReaders.get(caller))) {
+        if (Option.isSome(allowedReaders.get(principalCompare, caller))) {
             Iter.toArray<(Principal, Position)>(
                 Iter.map<(Principal, PlayerData), (Principal, Position)>(
                     players.entries(),
@@ -396,23 +402,23 @@ persistent actor UserNode {
 
     // Signaling Messages: Facilitate WebRTC P2P connections
     public shared ({ caller }) func sendSignalingMessage(to: Principal, message: Text) : async () {
-        switch (players.get(to)) {
+        switch (players.get(principalCompare, to)) {
             case (?recipient) {
-                let updatedMessages = Array.append(recipient.signalingMessages, [(caller, message)]);
+                let updatedMessages = Array.tabulate(recipient.signalingMessages.size() + 1, func(i) : (Principal, Text) = if (i < recipient.signalingMessages.size()) recipient.signalingMessages[i] else (caller, message));
                 let updatedPlayer = {
                     principal = recipient.principal;
                     position = recipient.position;
                     signalingMessages = updatedMessages;
                     lastUpdate = recipient.lastUpdate;
                 };
-                players.put(to, updatedPlayer);
+                players.add(principalCompare, to, updatedPlayer);
             };
             case null {};
         };
     };
 
     public query ({ caller }) func getSignalingMessages() : async [(Principal, Text)] {
-        switch (players.get(caller)) {
+        switch (players.get(principalCompare, caller)) {
             case (?player) { player.signalingMessages };
             case null { [] };
         };
@@ -422,13 +428,13 @@ persistent actor UserNode {
     public shared ({ caller }) func updateKhetMetadata(khetId: Text, newMetadata: KhetMetadata) : async Result.Result<(), Text> {
         switch (owner) {
             case (?own) {
-                if (caller != own and Option.isNull(allowedReaders.get(caller))) {
+                if (caller != own and Option.isNull(allowedReaders.get(principalCompare, caller))) {
                     return #err("Unauthorized");
                 };
-                switch (khets.get(khetId)) {
+                switch (khets.get(Text.compare, khetId)) {
                     case (?khet) {
                         // Simple permission: any logged-in player can update for now
-                        khets.put(khetId, newMetadata);
+                        khets.add(Text.compare, khetId, newMetadata);
                         return #ok(());
                     };
                     case null { return #err("Khet not found") };
@@ -444,14 +450,14 @@ persistent actor UserNode {
         case (?own) { if (caller != own) return #err("Only owner"); };
         case null { return #err("Owner not set"); };
         };
-        khetPermissions.put(khetId, (allowedReadersList, allowedWritersList));
+        khetPermissions.add(Text.compare, khetId, (allowedReadersList, allowedWritersList));
         #ok(());
     };
 
     // NEW: Filtered khets query
     public query({ caller = _ }) func getKhetsByType(khetType: Text, _includePrivate: Bool) : async [KhetMetadata] {
         // permission check similar to getAllKhets...
-        let filtered = Array.filter(Iter.toArray(khets.vals()), func(k: KhetMetadata) : Bool {
+        let filtered = Array.filter(Iter.toArray(Iter.map(khets.entries(), func((k,v)) { v })), func(k: KhetMetadata) : Bool {
         k.khetType == khetType
         });
         filtered;
@@ -462,8 +468,8 @@ persistent actor UserNode {
         switch (owner) { 
             case (?own) { 
                 if (caller == own) { 
-                    khets.delete(khetId); 
-                    pendingKhets.delete(khetId); 
+                    khets.remove(Text.compare, khetId); 
+                    pendingKhets.remove(Text.compare, khetId); 
                 }; 
             }; 
             case null {}; 
@@ -527,7 +533,7 @@ persistent actor UserNode {
 
     // Get Nearby Players: Identify the 5 closest players
     public query ({ caller }) func getNearbyPlayers(count: Nat) : async [Principal] {
-        switch (players.get(caller)) {
+        switch (players.get(principalCompare, caller)) {
             case (?callerData) {
                 let distances = Iter.toArray<(Principal, Float)>(
                     Iter.map<(Principal, PlayerData), (Principal, Float)>(
@@ -548,8 +554,8 @@ persistent actor UserNode {
                 let sorted = Array.sort(distances, func (a: (Principal, Float), b: (Principal, Float)) : Order.Order {
                     Float.compare(a.1, b.1)
                 });
-                let topN = Array.subArray(sorted, 0, Nat.min(count + 1, sorted.size()));
-                Array.mapFilter(topN, func ((p, _): (Principal, Float)) : ?Principal {
+                let topN = Array.tabulate(Nat.min(count + 1, sorted.size()), func(i) = sorted[i]);
+                Array.filterMap(topN, func ((p, _): (Principal, Float)) : ?Principal {
                     if (p == caller) { null } else { ?p }
                 })
             };
@@ -559,9 +565,9 @@ persistent actor UserNode {
 
     // Store new Chat message into Array
     public func sendChatMessage(message: Message) : async () {
-        messages := Array.append([message], messages);
+        messages := Array.tabulate(messages.size() + 1, func(i : Nat) : Message { if (i == 0) message else messages[i - 1] });
         if (messages.size() > MAX_MESSAGES) {
-            messages := Array.subArray(messages, 0, MAX_MESSAGES);
+            messages := Array.tabulate(Nat.min(MAX_MESSAGES, messages.size()), func(i : Nat) : Message { messages[i] });
         };
     };
 

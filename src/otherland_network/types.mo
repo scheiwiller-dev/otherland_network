@@ -1,11 +1,11 @@
 // types.mo - Shared types for Otherland Network
 // Import this in both cardinal.mo and user_node.mo to avoid duplication
 
-import Principal "mo:base/Principal";
-import Text "mo:base/Text";
-import Nat "mo:base/Nat";
-import Int "mo:base/Int";
-import Float "mo:base/Float";
+import Principal "mo:core/Principal";
+import Text "mo:core/Text";
+import Nat "mo:core/Nat";
+import Int "mo:core/Int";
+import Float "mo:core/Float";
 
 module {
 

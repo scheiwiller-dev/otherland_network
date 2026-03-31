@@ -1,18 +1,19 @@
-import Principal "mo:base/Principal";
-import HashMap "mo:base/HashMap";
-import Cycles "mo:base/ExperimentalCycles";
-import _Error "mo:base/Error";
-import Blob "mo:base/Blob";
-import Option "mo:base/Option";
-import Result "mo:base/Result";
-import Iter "mo:base/Iter";
-import Buffer "mo:base/Buffer";
-import Array "mo:base/Array";
-import Text "mo:base/Text";
-import Nat "mo:base/Nat";
-import Int "mo:base/Int";
-import Time "mo:base/Time";
-import Debug "mo:base/Debug";
+import Principal "mo:core/Principal";
+import Map "mo:core/Map";
+import Cycles "mo:core/Cycles";
+import _Error "mo:core/Error";
+import Blob "mo:core/Blob";
+import Option "mo:core/Option";
+import Result "mo:core/Result";
+import Iter "mo:core/Iter";
+import List "mo:core/List";
+import Array "mo:core/Array";
+import Text "mo:core/Text";
+import Nat "mo:core/Nat";
+import Int "mo:core/Int";
+import Time "mo:core/Time";
+import Debug "mo:core/Debug";
+import Order "mo:core/Order";
 
 import Types "types";
 
@@ -29,6 +30,12 @@ persistent actor Cardinal {
   type Invitation    = Types.Invitation;
   type AuditLogEntry  = Types.AuditLogEntry;
 
+  // Compare functions for Map
+  func principalCompare(a : Principal, b : Principal) : Order.Order {
+    Text.compare(Principal.toText(a), Principal.toText(b))
+  };
+
+
   // Stable variables for raw data
   var _adminPrincipal : Principal = Principal.fromText("fxhz4-w423j-q2chq-mcdn2-ihrcb-egwai-7eoh5-x4y76-3zzsk-4loyy-fqe");
   var registryEntries : [(Principal, Principal)] = [];
@@ -43,51 +50,41 @@ persistent actor Cardinal {
   var auditLogEntries : [Types.AuditLogEntry] = [];
 
   // In-memory HashMaps reconstructed from stable data
-  transient var registry = HashMap.fromIter<Principal, Principal>(
+  transient var registry = Map.fromIter<Principal, Principal>(
     registryEntries.vals(),
-    10,
-    Principal.equal,
-    Principal.hash
+    principalCompare
   );
-  transient var accessControl = HashMap.fromIter<Principal, HashMap.HashMap<Principal, ()>>(
-    Iter.map<(Principal, [(Principal, ())]), (Principal, HashMap.HashMap<Principal, ()>)>(
+  transient var accessControl = Map.fromIter<Principal, Map.Map<Principal, ()>>(
+    Iter.map<(Principal, [(Principal, ())]), (Principal, Map.Map<Principal, ()>)>(
       accessControlEntries.vals(),
       func((user, allowedList)) {
-        (user, HashMap.fromIter<Principal, ()>(allowedList.vals(), 10, Principal.equal, Principal.hash))
+        (user, Map.fromIter<Principal, ()>(allowedList.vals(), principalCompare))
       }
     ),
-    10,
-    Principal.equal,
-    Principal.hash
+    principalCompare
   );
-  transient var friendLists = HashMap.fromIter<Principal, [Principal]>(
+  transient var friendLists = Map.fromIter<Principal, [Principal]>(
     friendListsEntries.vals(),
-    10,
-    Principal.equal,
-    Principal.hash
+    principalCompare
   );
-  transient var invitations = HashMap.fromIter<Text, Invitation>(
+  transient var invitations = Map.fromIter<Text, Invitation>(
       invitationsEntries.vals(),
-      10,
-      Text.equal,
-      Text.hash
+      Text.compare
   );
-  transient var nodeVisibility = HashMap.fromIter<Principal, Bool>(
+  transient var nodeVisibility = Map.fromIter<Principal, Bool>(
     nodeVisibilityEntries.vals(),
-    10,
-    Principal.equal,
-    Principal.hash
+    principalCompare
   );
-  transient var blockedUsers = HashMap.fromIter<Principal, ()>(
-    blockedUsersEntries.vals(), 10, Principal.equal, Principal.hash
+  transient var blockedUsers = Map.fromIter<Principal, ()>(
+    blockedUsersEntries.vals(), principalCompare
   );
-  transient var auditLog = Buffer.Buffer<Types.AuditLogEntry>(50);
+  transient var auditLog : [Types.AuditLogEntry] = [];
   
   // Upgrade hooks to save and restore HashMap data
   system func preupgrade() {
     registryEntries := Iter.toArray(registry.entries());
     accessControlEntries := Iter.toArray(
-      Iter.map<(Principal, HashMap.HashMap<Principal, ()>), (Principal, [(Principal, ())])>(
+      Iter.map<(Principal, Map.Map<Principal, ()>), (Principal, [(Principal, ())])>(
         accessControl.entries(),
         func((user, allowedMap)) {
           (user, Iter.toArray(allowedMap.entries()))
@@ -102,52 +99,40 @@ persistent actor Cardinal {
         (p, ())
       })
     );
-    auditLogEntries := Iter.toArray(auditLog.vals());
+    auditLogEntries := auditLog;
   };
 
   system func postupgrade() {
-    registry := HashMap.fromIter<Principal, Principal>(
+    registry := Map.fromIter<Principal, Principal>(
       registryEntries.vals(),
-      10,
-      Principal.equal,
-      Principal.hash
+      principalCompare
     );
-    accessControl := HashMap.fromIter<Principal, HashMap.HashMap<Principal, ()>>(
-      Iter.map<(Principal, [(Principal, ())]), (Principal, HashMap.HashMap<Principal, ()>)>(
+    accessControl := Map.fromIter<Principal, Map.Map<Principal, ()>>(
+      Iter.map<(Principal, [(Principal, ())]), (Principal, Map.Map<Principal, ()>)>(
         accessControlEntries.vals(),
         func((user, allowedList)) {
-          (user, HashMap.fromIter<Principal, ()>(allowedList.vals(), 10, Principal.equal, Principal.hash))
+          (user, Map.fromIter<Principal, ()>(allowedList.vals(), principalCompare))
         }
       ),
-      10,
-      Principal.equal,
-      Principal.hash
+      principalCompare
     );
-    friendLists := HashMap.fromIter<Principal, [Principal]>(
+    friendLists := Map.fromIter<Principal, [Principal]>(
       friendListsEntries.vals(),
-      10,
-      Principal.equal,
-      Principal.hash
+      principalCompare
     );
-    invitations := HashMap.fromIter<Text, Invitation>(
+    invitations := Map.fromIter<Text, Invitation>(
         invitationsEntries.vals(),
-        10,
-        Text.equal,
-        Text.hash
+        Text.compare
     );
-    nodeVisibility := HashMap.fromIter<Principal, Bool>(
+    nodeVisibility := Map.fromIter<Principal, Bool>(
       nodeVisibilityEntries.vals(),
-      10,
-      Principal.equal,
-      Principal.hash
+      principalCompare
     );
-    blockedUsers := HashMap.fromIter<Principal, ()>(
+    blockedUsers := Map.fromIter<Principal, ()>(
       blockedUsersEntries.vals(), 
-      10, 
-      Principal.equal, 
-      Principal.hash
+      principalCompare
     );
-    auditLog := Buffer.fromIter<AuditLogEntry>(auditLogEntries.vals());
+    auditLog := auditLogEntries;
   };
 
   // NEW: Admin functions
@@ -164,9 +149,9 @@ persistent actor Cardinal {
 
   public shared({ caller }) func getNodeStatus(user: Principal) : async ?Types.NodeStatus {
     if (caller != _adminPrincipal and caller != user) return null;
-    switch (registry.get(user)) {
+    switch (registry.get(principalCompare, user)) {
       case (?canisterId) {
-        let isPublic = Option.get(nodeVisibility.get(user), false);
+        let isPublic = Option.get(nodeVisibility.get(principalCompare, user), false);
         let nodeActor = actor(Principal.toText(canisterId)) : actor { getCyclesBalance : () -> async Nat };
         let cycles = try { await nodeActor.getCyclesBalance() } catch (_) { 0 };
         ?{ canisterId; isPublic; cycles };
@@ -177,7 +162,7 @@ persistent actor Cardinal {
 
   public shared({ caller }) func topUpNodeCycles(user: Principal, amount: Nat) : async () {
     if (caller != _adminPrincipal) return;
-    switch (registry.get(user)) {
+    switch (registry.get(principalCompare, user)) {
       case (?canisterId) {
         await (with cycles = amount) (actor(Principal.toText(canisterId)) : actor { acceptCycles : () -> async () }).acceptCycles();
         _logAudit(caller, "topUpNodeCycles", "Topped up " # Nat.toText(amount) # " for " # Principal.toText(user));
@@ -189,20 +174,20 @@ persistent actor Cardinal {
   public shared({ caller }) func blockUser(user: Principal, block: Bool) : async () {
     if (caller != _adminPrincipal) return;
     if (block) {
-      blockedUsers.put(user, ());
+      blockedUsers.add(principalCompare, user, ());
     } else {
-      blockedUsers.delete(user);
+      blockedUsers.remove(principalCompare, user);
     };
     _logAudit(caller, "blockUser", Principal.toText(user) # " blocked=" # debug_show(block));
   };
 
   public query func isBlocked(user: Principal) : async Bool {
-    Option.isSome(blockedUsers.get(user));
+    Option.isSome(blockedUsers.get(principalCompare, user));
   };
 
   // Friend helper (cross-cutting recommendation)
   public query func isFriendWith(userA: Principal, userB: Principal) : async Bool {
-    switch (friendLists.get(userA)) {
+    switch (friendLists.get(principalCompare, userA)) {
       case (?friends) { Array.find(friends, func(f: Principal) : Bool { f == userB }) != null };
       case null { false };
     };
@@ -211,25 +196,25 @@ persistent actor Cardinal {
   // Friend List Management
   public shared({ caller }) func addFriend(friend : Principal) : async () {
     if (caller == friend) return; // Prevent adding self
-    switch (friendLists.get(caller)) {
+    switch (friendLists.get(principalCompare, caller)) {
       case (?friends) {
         let existing = Array.find<Principal>(friends, func(f) { f == friend });
         if (existing == null) {
-          let newFriends = Array.append(friends, [friend]);
-          friendLists.put(caller, newFriends);
+          let newFriends = Array.tabulate(friends.size() + 1, func(i : Nat) : Principal { if (i < friends.size()) friends[i] else friend });
+          friendLists.add(principalCompare, caller, newFriends);
         };
       };
       case null {
-        friendLists.put(caller, [friend]);
+        friendLists.add(principalCompare, caller, [friend]);
       };
     };
   };
 
   public shared({ caller }) func removeFriend(friend : Principal) : async () {
-    switch (friendLists.get(caller)) {
+    switch (friendLists.get(principalCompare, caller)) {
       case (?friends) {
         let newFriends = Array.filter<Principal>(friends, func(f : Principal) : Bool { f != friend });
-        friendLists.put(caller, newFriends);
+        friendLists.add(principalCompare, caller, newFriends);
       };
       case null {
         // No friends to remove
@@ -238,7 +223,7 @@ persistent actor Cardinal {
   };
 
   public query({ caller }) func getFriends() : async [Principal] {
-    switch (friendLists.get(caller)) {
+    switch (friendLists.get(principalCompare, caller)) {
       case (?friends) { friends };
       case null { [] };
     };
@@ -249,43 +234,43 @@ persistent actor Cardinal {
       let token = Nat.toText(invitationCounter) # "-" # Int.toText(Time.now());
       invitationCounter += 1;
       let expiration = Time.now() + 7 * 24 * 3600 * 1_000_000_000; // 7 days in nanoseconds
-      invitations.put(token, { inviter = caller; expiration });
+      invitations.add(Text.compare, token, { inviter = caller; expiration });
       return token;
   };
 
   // Accept a friend invitation
   public shared({ caller }) func acceptFriendInvitation(token: Text) : async Result.Result<(), Text> {
-      switch (invitations.get(token)) {
+      switch (invitations.get(Text.compare, token)) {
           case (null) { return #err("Invalid token") };
           case (?invitation) {
               if (Time.now() > invitation.expiration) {
-                  invitations.delete(token);
+                  invitations.remove(Text.compare, token);
                   return #err("Invitation expired");
               };
               // Add to each other's friend lists
-              switch (friendLists.get(invitation.inviter)) {
+              switch (friendLists.get(principalCompare, invitation.inviter)) {
                   case (?friends) {
                       let existing = Array.find<Principal>(friends, func(f) { f == caller });
                       if (existing == null) {
-                          friendLists.put(invitation.inviter, Array.append(friends, [caller]));
+                          friendLists.add(principalCompare, invitation.inviter, Array.tabulate(friends.size() + 1, func(i : Nat) : Principal { if (i < friends.size()) friends[i] else caller }));
                       };
                   };
                   case null {
-                      friendLists.put(invitation.inviter, [caller]);
+                      friendLists.add(principalCompare, invitation.inviter, [caller]);
                   };
               };
-              switch (friendLists.get(caller)) {
+              switch (friendLists.get(principalCompare, caller)) {
                   case (?friends) {
                       let existing = Array.find<Principal>(friends, func(f) { f == invitation.inviter });
                       if (existing == null) {
-                          friendLists.put(caller, Array.append(friends, [invitation.inviter]));
+                          friendLists.add(principalCompare, caller, Array.tabulate(friends.size() + 1, func(i : Nat) : Principal { if (i < friends.size()) friends[i] else invitation.inviter }));
                       };
                   };
                   case null {
-                      friendLists.put(caller, [invitation.inviter]);
+                      friendLists.add(principalCompare, caller, [invitation.inviter]);
                   };
               };
-              invitations.delete(token);
+              invitations.remove(Text.compare, token);
               return #ok(());
           };
       };
@@ -293,10 +278,10 @@ persistent actor Cardinal {
 
   // NEW: cancelInvitation and getPendingInvitations
   public shared({ caller }) func cancelInvitation(token: Text) : async Result.Result<(), Text> {
-    switch (invitations.get(token)) {
+    switch (invitations.get(Text.compare, token)) {
       case (?inv) {
         if (inv.inviter == caller) {
-          invitations.delete(token);
+          invitations.remove(Text.compare, token);
           return #ok(());
         } else { return #err("Not the inviter"); };
       };
@@ -312,15 +297,20 @@ persistent actor Cardinal {
 
   // Internal helper
   private func _logAudit(user: Principal, action: Text, details: Text) {
-    auditLog.add({ timestamp = Time.now(); user; action; details });
-    if (auditLog.size() > 50) { ignore auditLog.remove(0); };
+    let oldLog = auditLog;
+    auditLog := Array.tabulate(oldLog.size() + 1, func(i) = if (i < oldLog.size()) oldLog[i] else ({ timestamp = Time.now(); user; action; details }));
+    if (auditLog.size() > 50) {
+      let oldLog2 = auditLog;
+      let excess = Nat.sub(oldLog2.size(), 50);
+      auditLog := Iter.toArray(Iter.take(Iter.drop(Iter.fromArray(oldLog2), excess), 50));
+    };
   };
 
   // Node Visibility Management
   public shared({ caller }) func setNodeVisibility(isPublic : Bool) : async () {
-    switch (registry.get(caller)) {
+    switch (registry.get(principalCompare, caller)) {
       case (?_canisterId) {
-        nodeVisibility.put(caller, isPublic);
+        nodeVisibility.add(principalCompare, caller, isPublic);
       };
       case null {
         // No canister for this user
@@ -329,12 +319,12 @@ persistent actor Cardinal {
   };
 
   public query({ caller }) func getNodeVisibility() : async ?Bool {
-    nodeVisibility.get(caller);
+    nodeVisibility.get(principalCompare, caller);
   };
 
   // Get Allowed Users
   public query({ caller }) func getAllowedUsers() : async [Principal] {
-    switch (accessControl.get(caller)) {
+    switch (accessControl.get(principalCompare, caller)) {
       case (?allowedMap) {
         Iter.toArray(allowedMap.keys())
       };
@@ -344,16 +334,16 @@ persistent actor Cardinal {
 
   // Get List of all Canisters with Access
   public query({ caller }) func getAccessibleCanisters() : async [(Principal, Principal, Bool)] {
-    let buf = Buffer.Buffer<(Principal, Principal, Bool)>(0);
+    let buf = List.empty<(Principal, Principal, Bool)>();
     for ((owner, canisterId) in registry.entries()) {
-      let isPublic = switch (nodeVisibility.get(owner)) {
+      let isPublic = switch (nodeVisibility.get(principalCompare, owner)) {
         case (?val) { val };
         case null { false };
       };
       if (isPublic or caller == owner) {
         buf.add((canisterId, owner, isPublic));
       } else {
-        switch (accessControl.get(owner)) {
+        switch (accessControl.get(principalCompare, owner)) {
           case (?allowedMap) {
             if (Option.isSome(allowedMap.get(caller))) {
               buf.add((canisterId, owner, isPublic));
@@ -365,7 +355,7 @@ persistent actor Cardinal {
         }
       }
     };
-    return Buffer.toArray(buf);
+    return List.toArray(buf);
   };
 
   // Request a new canister
@@ -375,7 +365,7 @@ persistent actor Cardinal {
     };
 
     // Cap User canisters at 1 (remove if unwanted)
-    switch (registry.get(caller)) {
+    switch (registry.get(principalCompare, caller)) {
       case (?canisterId) {
         return #ok(canisterId); // Return existing canister ID
       };
@@ -426,11 +416,11 @@ persistent actor Cardinal {
         Debug.print("init done - balance now: " # Nat.toText(Cycles.balance()));
 
         // Register the canister and set up access control
-        registry.put(caller, canister_id);
-        nodeVisibility.put(caller, false); // Default to private
-        let allowedMap = HashMap.HashMap<Principal, ()>(10, Principal.equal, Principal.hash);
-        allowedMap.put(caller, ()); // Owner is always allowed
-        accessControl.put(caller, allowedMap);
+        registry.add(principalCompare, caller, canister_id);
+        nodeVisibility.add(principalCompare, caller, false); // Default to private
+        let allowedMap = Map.empty<Principal, ()>();
+        allowedMap.add(principalCompare, caller, ()); // Owner is always allowed
+        accessControl.add(principalCompare, caller, allowedMap);
         Debug.print("=== requestCanister finished successfully");
         return #ok(canister_id);
       };
@@ -439,10 +429,10 @@ persistent actor Cardinal {
 
   // Get canister ID if the caller is authorized
   public query({ caller }) func getCanisterId(user : Principal) : async ?Principal {
-    switch (accessControl.get(user)) {
+    switch (accessControl.get(principalCompare, user)) {
       case (?allowedMap) {
         if (Option.isSome(allowedMap.get(caller))) {
-          return registry.get(user);
+          return registry.get(principalCompare, user);
         } else {
           return null;
         };
@@ -455,19 +445,19 @@ persistent actor Cardinal {
 
   // Add user to allowed list for a node
   public shared({ caller }) func addAllowedUser(nodeId: Principal, user: Principal) : async Result.Result<(), Text> {
-      switch (registry.get(caller)) {
+      switch (registry.get(principalCompare, caller)) {
           case (?ownedNodeId) {
               if (ownedNodeId != nodeId) {
                   return #err("Not the owner of this node");
               };
-              switch (accessControl.get(caller)) {
+              switch (accessControl.get(principalCompare, caller)) {
                   case (?allowedMap) {
-                      allowedMap.put(user, ());
+                      allowedMap.add(principalCompare, user, ());
                   };
                   case null {
-                      let newMap = HashMap.HashMap<Principal, ()>(10, Principal.equal, Principal.hash);
-                      newMap.put(user, ());
-                      accessControl.put(caller, newMap);
+                      let newMap = Map.empty<Principal, ()>();
+                      newMap.add(principalCompare, user, ());
+                      accessControl.add(principalCompare, caller, newMap);
                   };
               };
               // Update the user node canister
@@ -485,9 +475,9 @@ persistent actor Cardinal {
 
   // Remove an allowed principal (only callable by the owner)
   public shared({ caller }) func removeAllowed(allowed : Principal) : async Result.Result<(), Text> {
-    switch (accessControl.get(caller)) {
+    switch (accessControl.get(principalCompare, caller)) {
       case (?allowedMap) {
-        allowedMap.delete(allowed);
+        allowedMap.remove(principalCompare, allowed);
         return #ok(());
       };
       case null {
@@ -507,7 +497,7 @@ persistent actor Cardinal {
 
   // Upgrade the user's canister with the current WASM module
   public shared({ caller }) func upgradeCanister() : async Result.Result<(), Text> {
-    switch (registry.get(caller)) {
+    switch (registry.get(principalCompare, caller)) {
       case (?canisterId) {
         switch (wasmModule) {
           case (?wasmModuleBlob) {
