@@ -18,14 +18,8 @@ jobs:
         with:
           dfx-version: '0.31.0'
 
-      - name: Download moc
-        run: |
-          mkdir -p ~/.cache/dfinity/versions/0.31.0
-          curl -L -o moc.tar.gz https://github.com/dfinity/sdk/releases/download/0.31.0/moc-0.31.0-x86_64-unknown-linux-gnu.tar.gz
-          tar -xzf moc.tar.gz
-          mv moc ~/.cache/dfinity/versions/0.31.0/
-          chmod +x ~/.cache/dfinity/versions/0.31.0/moc
-          rm moc.tar.gz
+      - name: Download binaries
+        run: dfx build --check
 
       - uses: dfinity/setup-mops@main
 
