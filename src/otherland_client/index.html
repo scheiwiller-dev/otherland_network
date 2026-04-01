@@ -84,19 +84,42 @@
 
             <!-- Profile -->
             <div id="profile-tab" class="tab">
-                
-                
+
+                <!-- User Profile -->
+                <h2>User Profile</h2>
+                <div id="user-profile">
+                    <div id="display-username-row" class="profile-row">
+                        <label>Username:</label>
+                        <span id="username-display"></span>
+                        <button id="copy-username-btn" title="Copy username">Copy</button>
+                        <button id="edit-username-btn">Change</button>
+                    </div>
+                    <div id="edit-username-row" class="hidden">
+                        <input type="text" id="edit-username-input" placeholder="New username">
+                        <button id="save-edit-username-btn">Save</button>
+                        <button id="cancel-edit-username-btn">Cancel</button>
+                        <p id="edit-username-error" class="error-message hidden"></p>
+                    </div>
+                    <div class="profile-row">
+                        <label>Principal:</label>
+                        <span id="principal-display"></span>
+                        <button id="copy-principal-btn" title="Copy principal">Copy</button>
+                    </div>
+                </div>
+
                 <!-- Friends List -->
                 <div class="flex-row">
                     <h2>Friend List</h2>
-                    <button id="invitationLinkBtn">Generate Invite Link</button>                    <button id="generateInviteBtn">Invite Link</button>                </div>
-                <div id="add-friend-row" style="display: none; margin-bottom: 10px;">
-                    <input type="text" id="friend-identifier-input" placeholder="Enter username or principal" style="margin-right: 10px;">
+                    <button id="invitationLinkBtn" class="hidden">Generate Invite Link</button>
+                    <button id="generateInviteBtn">Invite Link</button>
+                </div>
+                <div id="add-friend-row" class="hidden">
+                    <input type="text" id="friend-identifier-input" placeholder="Enter username or principal">
                     <button id="send-friend-request-btn">Add</button>
                     <button id="cancel-add-friend-btn">Cancel</button>
                 </div>
                 <div id="friends-info">
-                    <div id="pending-requests" style="margin-bottom: 20px;"></div>
+                    <div id="pending-requests"></div>
                     <div id="friends-list"></div>
                     <p id="invitation-link"></p>
                 </div>

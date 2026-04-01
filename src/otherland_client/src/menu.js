@@ -108,8 +108,8 @@ document.addEventListener('contextmenu', function(e){
 // Add Friend Button
 const invitationLinkBtn = document.getElementById("invitationLinkBtn");
 invitationLinkBtn.addEventListener('click', () => {
-    document.getElementById('add-friend-row').style.display = 'block';
-    invitationLinkBtn.style.display = 'none';
+    document.getElementById('add-friend-row').classList.remove('hidden');
+    invitationLinkBtn.classList.add('hidden');
 });
 
 // Send Friend Request Button
@@ -123,8 +123,8 @@ sendFriendRequestBtn.addEventListener('click', async () => {
     if ('ok' in result) {
         alert('Friend request sent!');
         document.getElementById('friend-identifier-input').value = '';
-        document.getElementById('add-friend-row').style.display = 'none';
-        invitationLinkBtn.style.display = 'block';
+        document.getElementById('add-friend-row').classList.add('hidden');
+        invitationLinkBtn.classList.remove('hidden');
     } else {
         alert('Error: ' + result.err);
     }
@@ -134,8 +134,101 @@ sendFriendRequestBtn.addEventListener('click', async () => {
 const cancelAddFriendBtn = document.getElementById("cancel-add-friend-btn");
 cancelAddFriendBtn.addEventListener('click', () => {
     document.getElementById('friend-identifier-input').value = '';
-    document.getElementById('add-friend-row').style.display = 'none';
-    invitationLinkBtn.style.display = 'block';
+    document.getElementById('add-friend-row').classList.add('hidden');
+    invitationLinkBtn.classList.remove('hidden');
+});
+
+// Edit Username Button
+const editUsernameBtn = document.getElementById("edit-username-btn");
+editUsernameBtn.addEventListener('click', () => {
+    document.getElementById('edit-username-row').classList.remove('hidden');
+    document.getElementById('edit-username-input').value = user.getUserName() || '';
+    document.getElementById('edit-username-input').focus();
+});
+
+// Save Edit Username Button
+const saveEditUsernameBtn = document.getElementById("save-edit-username-btn");
+saveEditUsernameBtn.addEventListener('click', async () => {
+    const newUsername = document.getElementById('edit-username-input').value.trim();
+    const errorEl = document.getElementById('edit-username-error');
+
+    if (!newUsername || newUsername.length < 3) {
+        errorEl.textContent = 'Username must be at least 3 characters';
+        errorEl.classList.remove('hidden');
+        return;
+    }
+
+    try {
+        const actor = await getUserNodeActor();
+        if (actor) {
+            await actor.setUsername(newUsername);
+        }
+
+        localStorage.setItem('username', newUsername);
+        user.setUserName(newUsername);
+
+        console.log('Username updated successfully:', newUsername);
+
+        document.getElementById('edit-username-row').classList.add('hidden');
+        updateProfileDisplay();
+        updateAccountSwitcher(false); // Update the info box with new username
+
+    } catch (err) {
+        console.error('Failed to update username:', err);
+        errorEl.textContent = 'Failed to update username. Please try again.';
+        errorEl.classList.remove('hidden');
+    }
+});
+
+// Cancel Edit Username Button
+const cancelEditUsernameBtn = document.getElementById("cancel-edit-username-btn");
+cancelEditUsernameBtn.addEventListener('click', () => {
+    document.getElementById('edit-username-row').classList.add('hidden');
+    document.getElementById('edit-username-error').classList.add('hidden');
+});
+
+// Copy Username Button
+const copyUsernameBtn = document.getElementById("copy-username-btn");
+copyUsernameBtn.addEventListener('click', async () => {
+    const username = document.getElementById('username-display').textContent;
+    if (username && username !== 'Not set') {
+        try {
+            await navigator.clipboard.writeText(username);
+            // Visual feedback
+            const originalText = copyUsernameBtn.textContent;
+            copyUsernameBtn.textContent = '✓';
+            copyUsernameBtn.style.color = '#35bd00';
+            setTimeout(() => {
+                copyUsernameBtn.textContent = originalText;
+                copyUsernameBtn.style.color = '';
+            }, 1000);
+        } catch (err) {
+            console.error('Failed to copy username:', err);
+            alert('Failed to copy username to clipboard');
+        }
+    }
+});
+
+// Copy Principal Button
+const copyPrincipalBtn = document.getElementById("copy-principal-btn");
+copyPrincipalBtn.addEventListener('click', async () => {
+    const principal = document.getElementById('principal-display').textContent;
+    if (principal && principal !== 'Not logged in') {
+        try {
+            await navigator.clipboard.writeText(principal);
+            // Visual feedback
+            const originalText = copyPrincipalBtn.textContent;
+            copyPrincipalBtn.textContent = '✓';
+            copyPrincipalBtn.style.color = '#35bd00';
+            setTimeout(() => {
+                copyPrincipalBtn.textContent = originalText;
+                copyPrincipalBtn.style.color = '';
+            }, 1000);
+        } catch (err) {
+            console.error('Failed to copy principal:', err);
+            alert('Failed to copy principal to clipboard');
+        }
+    }
 });
 
 // Generate Invitation Link Button
@@ -167,6 +260,15 @@ export async function handleInvitation() {
     }
 }
 
+// Function to update and display the user profile
+function updateProfileDisplay() {
+    const usernameDisplay = document.getElementById('username-display');
+    const principalDisplay = document.getElementById('principal-display');
+
+    usernameDisplay.textContent = user.getUserName() || 'Not set';
+    principalDisplay.textContent = user.getUserPrincipal() || 'Not logged in';
+}
+
 // Function to update and display the friends list and pending requests
 export async function updateFriendsList() {
     const actor = await getCardinalActor();
@@ -186,16 +288,14 @@ export async function updateFriendsList() {
         pendingRequestsDiv.appendChild(pendingTitle);
 
         const pendingTable = document.createElement('table');
-        pendingTable.style.border = '1px solid black';
+        pendingTable.className = 'friends-table';
         const pendingHeaderRow = document.createElement('tr');
 
         const pendingHeaderFrom = document.createElement('th');
         pendingHeaderFrom.textContent = 'From';
-        pendingHeaderFrom.style.border = '1px solid black';
 
         const pendingHeaderActions = document.createElement('th');
         pendingHeaderActions.textContent = 'Actions';
-        pendingHeaderActions.style.border = '1px solid black';
 
         pendingHeaderRow.appendChild(pendingHeaderFrom);
         pendingHeaderRow.appendChild(pendingHeaderActions);
@@ -206,10 +306,8 @@ export async function updateFriendsList() {
 
             const cellFrom = document.createElement('td');
             cellFrom.textContent = request.from.toText();
-            cellFrom.style.border = '1px solid black';
 
             const cellActions = document.createElement('td');
-            cellActions.style.border = '1px solid black';
 
             const acceptBtn = document.createElement('button');
             acceptBtn.textContent = 'Accept';
@@ -250,16 +348,14 @@ export async function updateFriendsList() {
 
     // Create table for friends list
     const table = document.createElement('table');
-    table.style.border = '1px solid black'; // Basic styling
+    table.className = 'friends-table';
     const headerRow = document.createElement('tr');
-    
+
     const headerPrincipal = document.createElement('th');
     headerPrincipal.textContent = 'Friend Principal';
-    headerPrincipal.style.border = '1px solid black';
-    
+
     const headerActions = document.createElement('th');
     headerActions.textContent = 'Actions';
-    headerActions.style.border = '1px solid black';
     
     headerRow.appendChild(headerPrincipal);
     headerRow.appendChild(headerActions);
@@ -270,10 +366,8 @@ export async function updateFriendsList() {
         
         const cellPrincipal = document.createElement('td');
         cellPrincipal.textContent = principal.toText(); // Assuming principal has a toText() method
-        cellPrincipal.style.border = '1px solid black';
-        
+
         const cellActions = document.createElement('td');
-        cellActions.style.border = '1px solid black';
         
         const removeBtn = document.createElement('button');
         removeBtn.textContent = 'Remove';
@@ -472,7 +566,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         if (isGuest) {
             const status = document.createElement('button');
-            status.textContent = 'Logged in as Guest';
+            status.textContent = 'Guest';
             status.style.cursor = 'default';
             container.appendChild(status);
 
@@ -485,20 +579,12 @@ document.addEventListener('DOMContentLoaded', async () => {
             container.appendChild(loginBtn);
         } else {
             // II Logged-in user
-            const username = user.getUserName() && user.getUserName().trim() !== '' 
-                ? user.getUserName().trim() 
-                : null;
-            
-            const principalShort = user.getUserPrincipal() 
-                ? user.getUserPrincipal().slice(0, 11) + '...' 
-                : '';
-
-            const displayText = username 
-                ? `Logged in as <strong>${username}</strong><br>(${principalShort})` 
-                : `Logged in as ${principalShort}`;
+            const username = user.getUserName() && user.getUserName().trim() !== ''
+                ? user.getUserName().trim()
+                : 'Anonymous';
 
             const status = document.createElement('button');
-            status.innerHTML = displayText;
+            status.innerHTML = `<strong>${username}</strong>`;
             status.style.cursor = 'default';
             container.appendChild(status);
 
@@ -951,6 +1037,10 @@ document.addEventListener('DOMContentLoaded', async () => {
         switch (tabId) {
             case 'otherland-tab':
                 refreshNodeList();
+                updateFriendsList();
+                break;
+            case 'profile-tab':
+                updateProfileDisplay();
                 updateFriendsList();
                 break;
         }

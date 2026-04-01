@@ -59,6 +59,10 @@ $font-family: 'Orbitron', Arial, sans-serif;
   font-family: $font-family;
   cursor: crosshair;
 }
+
+.hidden {
+  display: none;
+}
 #main-menu #side-bar button.future-update {
   color: $background-semi;
 }
@@ -305,6 +309,108 @@ canvas {
 
     #quick-connect-invitation {
       display: none;
+    }
+
+    #profile-tab {
+      #user-profile {
+        .profile-row {
+          display: flex;
+          align-items: center;
+
+          label {
+            min-width: 100px;
+            margin-right: 40px;
+            color: $secondary-color;
+          }
+
+          span {
+            flex: 1;
+            color: $secondary-color;
+            margin-right: 40px;
+            max-width: 370px;
+          }
+
+          button {
+            margin-left: 10px;
+            width: 110px;
+          }
+
+          button[id^="copy-"] {
+            @include button-style;
+            width: 85px;
+            height: 44px;
+          }
+        }
+        
+        #edit-username-row {
+          margin-bottom: 0px;
+        }
+
+        #edit-username-row {
+          margin-left: 125px;
+          margin-bottom: 15px;
+
+          input {
+            width: 360px;
+            padding: 14px;
+            margin-right: 40px;
+            margin-bottom: 20px;
+            font-size: 16px;
+            background: black;
+            color: $secondary-color;
+            border: 1px solid $primary-color;
+            border-radius: 6px;
+          }
+
+          button {
+            margin-right: 40px;
+            width: 110px;
+          }
+          
+          #save-edit-username-btn {
+            width: 85px;
+          }
+        }
+      }
+
+      #add-friend-row {
+        margin-bottom: 10px;
+
+        input {
+          margin-right: 10px;
+          padding: 8px;
+          background: #222;
+          color: $secondary-color;
+          border: 1px solid $primary-color;
+          border-radius: 5px;
+        }
+      }
+
+      .friends-table {
+        border: 1px solid $primary-color;
+        border-collapse: collapse;
+        width: 100%;
+        margin-top: 10px;
+
+        th, td {
+          border: 1px solid $primary-color;
+          padding: 8px;
+          text-align: left;
+        }
+
+        th {
+          background: $background-dark;
+          color: $primary-color;
+        }
+
+        td {
+          color: $secondary-color;
+        }
+
+        button {
+          margin: 2px;
+        }
+      }
     }
 
     #khet-list {
