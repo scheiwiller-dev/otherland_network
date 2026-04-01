@@ -23,6 +23,10 @@ jobs:
       - name: install mops packages
         run: mops install
 
+      - name: install client dependencies
+        run: npm install
+        working-directory: src/otherland_client
+
       - name: Download binaries
         run: dfx build --check
 
