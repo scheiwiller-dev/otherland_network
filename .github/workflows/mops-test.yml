@@ -18,13 +18,13 @@ jobs:
         with:
           dfx-version: '0.31.0'
 
-      - name: Download binaries
-        run: dfx build --check
-
       - uses: dfinity/setup-mops@main
 
       - name: install mops packages
         run: mops install
+
+      - name: Download binaries
+        run: dfx build --check
 
       - name: run tests
         run: dfx cache show && mops test
