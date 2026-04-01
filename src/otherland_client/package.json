@@ -24,7 +24,10 @@
   "dependencies": {
     "@dimforge/rapier3d-compat": "^0.14.0",
     "@icp-sdk/auth": "^5.0.0",
+    "@icp-sdk/core": "^5.0.0",
     "lit-html": "^3.3.2",
+    "nipplejs": "^0.10.1",
+    "peerjs": "^1.5.4",
     "three": "^0.183.2"
   }
 }
