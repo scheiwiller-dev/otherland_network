@@ -1,9 +1,10 @@
 {
   "version": 3,
-  "mopsTomlDepsHash": "ff64a3397a64a1308d9c40b55426f47b9ac52968aeca88827fc3077ac72d79b0",
+  "mopsTomlDepsHash": "294ece6013c10c0432f7d5e989f7896cd683e2d069dd48d7f6a6e74bf7d4637e",
   "deps": {
     "core": "2.3.1",
-    "base": "0.16.0"
+    "base": "0.16.0",
+    "test": "2.1.2"
   },
   "hashes": {
     "core@2.3.1": {
@@ -117,6 +118,36 @@
       "base@0.16.0/src/TrieMap.mo": "f09aab78476ffd158f8ab789e0692ad61aa9b1f4ac6ff3af30cdac5f5c30a7e4",
       "base@0.16.0/src/Trie.mo": "3ca67f2527afaf5e663bd7b227384d0b20d0ea0cfc7c532e5d95a625c0d0d6bb",
       "base@0.16.0/src/TrieSet.mo": "9c8c1821582b344de6f3910f417527ec0b565876eb2d9da09455af05117ed45a"
+    },
+    "test@2.1.2": {
+      "test@2.1.2/LICENSE": "ec415b57f8143746b567c94bfad243f5342f3edf110c94641a1a60e02722db55",
+      "test@2.1.2/src/utils.mo": "6b81172d908c2fb759597373b811e22a987d4cd69f1aa69615da252bed6e7466",
+      "test@2.1.2/src/lib.mo": "e4559fbc3bcd229fb99de7dcdd68d56319ae8bc27509d6f3ad6d13c514915a39",
+      "test@2.1.2/src/async.mo": "79b433a5d32184d0cad289f0b7ee6cd2256534689a015430efc43e3510c2217a",
+      "test@2.1.2/README.md": "991a9ea896698d7ef1e7e55d038c7580d68182b3d30f78886304e374c64fbc01",
+      "test@2.1.2/src/expect/async.mo": "c1518bd82ef8c2def86bc6b5fc1df1691eab9935adacc413cab4fe9f1eda6f4a",
+      "test@2.1.2/mops.toml": "83e5024af6a5558f18a41b3ab8b60291f65e8470c0375c7e880896ccb02edf14",
+      "test@2.1.2/src/expect/expect-array.mo": "f5e6808b28c5948a40e11def8f5534bcacef1211a0b6f02e63e8653e5ee5e6aa",
+      "test@2.1.2/src/expect/expect-char.mo": "7464e454a815e76e9d56989d59b8eda8781dd7dd28019ada3c513b764a5ff863",
+      "test@2.1.2/src/expect/expect-int16.mo": "15dfb2b13e74819d9f02927708c8f7cbbb8e0b13c0a9b249d843b16c3bcf4659",
+      "test@2.1.2/src/expect/expect-blob.mo": "944d92855573f5056d10cab2ee67f5ca153a792de9aa5074ccb0da7417a77ceb",
+      "test@2.1.2/src/expect/expect-int.mo": "67837bcbd681bc180a8c528defab5153d9f8aaf4998b91ca3f787e714011cdf6",
+      "test@2.1.2/src/expect/expect-call.mo": "9aeeb5d56f753586e685fd3a7544b4a895e9e2a1f01f2c3423c66f87059512eb",
+      "test@2.1.2/src/expect/expect-bool.mo": "dd663249dd67d5ff5241a8ecb9b16e016abe24f0570e5aac8b912fc312e4a5d4",
+      "test@2.1.2/src/expect/expect-int32.mo": "577cc992737c99f07df7eb71462bb99f0b9b34727a4edf31dea88a7aff2bd48a",
+      "test@2.1.2/src/expect/expect-int64.mo": "c3d0025bca7dcda18872b5ea59baad9f485b33647a7118af45a12700793f3c19",
+      "test@2.1.2/src/expect/expect-int8.mo": "a88f864f471413fd4fe8300b828805a9e95c42278d55aa4351526d3c4f3c1e2c",
+      "test@2.1.2/src/expect/expect-nat8.mo": "2b5145da40599eb01ef5fe6807162cc9b2a5fbe5044fd4003ebdf6bf26cbf4b6",
+      "test@2.1.2/src/expect/expect-nat16.mo": "eff67a91dc8eed0478d3558c1900257802c5c6c527d13f4ef6726ebd53492d6a",
+      "test@2.1.2/src/expect/expect-nat32.mo": "3ea76a0c53c806fad57d768ca79702c65faaf85b69ad61e49688b90d9a32094b",
+      "test@2.1.2/src/expect/expect-nat.mo": "0f9cefc54f429a48a5ec1eb2f26bb73f771b6ca165fac300bf7228633429b049",
+      "test@2.1.2/src/expect/expect-nat64.mo": "13536637dbb595bceec51db56c7cfc39221a9d5b5ea23baee66d19d6103f600f",
+      "test@2.1.2/src/expect/expect-option.mo": "d5f2bce86a6f5c8e0bdbe1a72f1cbb80b01d3822b73da90239b84d91cb0af5d6",
+      "test@2.1.2/src/expect/expect-principal.mo": "93842843aa02bde6cdb94ee4daa35ed95d4b2da87bc228689b9cc8c5d9bdc178",
+      "test@2.1.2/src/expect/expect-text.mo": "ffb21d802a48411ed45555e82edd5b5a82c91eb37b88c5d8d061880bab897735",
+      "test@2.1.2/src/expect/lib.mo": "b74da3928ed8c23c31b5979059f0ac549cd7f09e7a29af9b105d8f9e32e192ed",
+      "test@2.1.2/src/expect/utils.mo": "22e364d2ec8285c09ace83cb99b3257ba66a87cfe0312f6623ab0ab35ce47009",
+      "test@2.1.2/src/expect/expect-result.mo": "3c03969dc0f08c80fa003ab23760a933f47ac928834734faca0f62fe940d3ab9"
     }
   }
 }

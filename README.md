@@ -61,6 +61,18 @@ https://internetcomputer.org/docs/building-apps/getting-started/install
 'dfx start --background --clean'
 'dfx deploy'
 
+`Testing`
+
+Run unit tests with Mops:
+```bash
+mops test
+```
+
+Tests are located in the `test/` directory and cover:
+- Type definitions and data structures
+- Basic utility functions
+- Core data operations
+
 `Participate`
 
 If you are working on something similar or find this idea interesting, don't hesitate to make contact.
