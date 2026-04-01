@@ -13,15 +13,14 @@ jobs:
 
     steps:
       - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+
+      - name: Install dfx
+        run: DFX_VERSION=0.31.0 sh -ci "$(curl -fsSL https://internetcomputer.org/install.sh)"
       
-      - uses: dfinity/setup-dfx@main
-      
-      - uses: dfinity/setup-mops@v1
-        with:
-          mops-version: 1
+      - uses: dfinity/setup-mops@main
 
       - name: install mops packages
         run: mops install
 
       - name: run tests
-        run: mops test
+        run: dfx cache show && mops test
