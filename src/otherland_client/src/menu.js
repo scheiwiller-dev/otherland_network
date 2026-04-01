@@ -421,6 +421,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         document.getElementById('start-screen').style.display = 'none';
         document.getElementById('main-menu').style.display = 'block';
         updateAccountSwitcher(false); 
+        showTab("otherland-tab")
     }
 
     // **Main Menu**

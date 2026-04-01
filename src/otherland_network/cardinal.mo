@@ -381,8 +381,7 @@ persistent actor Cardinal {
       case null {
 
         // Guard against cardinal running out of cycles
-        // We keep a 2.5x margin on the measured consumption (~2T)
-        if (Cycles.balance() < 5_100_000_000_000) {
+        if (Cycles.balance() < 2_500_000_000_000) {
           return #err("Cardinal canister has insufficient cycles. Top it up with: dfx ledger fabricate-cycles --all");
         };
 
@@ -395,7 +394,7 @@ persistent actor Cardinal {
         };
 
         // 2.5x margin applied to measured usage
-        let { canister_id } = await (with cycles = 1_300_000_000_000) ic.create_canister();  // ~1.3T (was 2T)
+        let { canister_id } = await (with cycles = 1_200_000_000_000) ic.create_canister();
 
         Debug.print("create_canister done - balance now: " # Nat.toText(Cycles.balance()));
 
@@ -403,7 +402,7 @@ persistent actor Cardinal {
         switch (wasmModule) {
           case (?wasmModuleBlob) {
             // 2.5x margin for install + buffer for the init call
-            await (with cycles = 650_000_000_000) ic.install_code({
+            await (with cycles = 100_000_000) ic.install_code({
               canister_id;
               wasm_module = wasmModuleBlob;
               arg = Blob.fromArray([]); // Empty args
@@ -421,7 +420,7 @@ persistent actor Cardinal {
           init : (Principal) -> async ();
         };
         // Extra cycles for the init call (small but safe)
-        await (with cycles = 100_000_000_000) userCanister.init(caller);
+        await (with cycles = 100_000_000) userCanister.init(caller);
         Debug.print("init done - balance now: " # Nat.toText(Cycles.balance()));
 
         // Register the canister and set up access control

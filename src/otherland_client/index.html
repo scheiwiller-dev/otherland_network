@@ -39,7 +39,7 @@
             <h1>Otherland</h1>
             <div id="side-bar-buttons">
                 <button id="otherland-btn">Otherland</button>
-                <button id="treehouse-btn">TreeHouse</button>
+                <button id="profile-btn">TreeHouse</button>
                 <button id="store-btn">Store</button>
                 <button id="wallet-btn">Wallet</button>
                 <button id="settings-btn">Settings</button>
@@ -65,6 +65,25 @@
                     <button id="edit-node-btn">Node Editor</button>
                     <button id="node-settings-btn">Settings</button>
                 </div>
+
+                <h1>TreeHouse</h1>
+
+                <button id="enter-treehouse-btn" class="highlighted">Enter TreeHouse</button>
+
+                <button id="edit-treehouse-btn">Edit Environment</button>
+                <button id="node-config-btn">Settings</button>
+                
+                <div id="quick-connect-invitation">
+                    <div>
+                        <p>Invitation to TreeHouse detected: </p>
+                        <button id="join-quick-connect">Connect</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Profile -->
+            <div id="profile-tab" class="tab">
+                
                 
                 <!-- Friends List -->
                 <div class="flex-row">
@@ -75,16 +94,6 @@
                     <ul id="friends-list"></ul>
                     <p id="invitation-link"></p>
                 </div>
-            </div>
-
-            <!-- TreeHouse -->
-            <div id="treehouse-tab" class="tab">
-                <h1>TreeHouse</h1>
-
-                <button id="enter-treehouse-btn" class="highlighted">Enter TreeHouse</button>
-
-                <button id="edit-treehouse-btn">Edit Environment</button>
-                <button id="node-config-btn">Settings</button>
 
                 <!-- Peer to Peer -->
                 <div class="flex-row">
@@ -96,12 +105,6 @@
                     <div class="flex-row">
                         <button id="share-th-link-btn">Invite Player</button>
                         <button id="reset-p2p-btn">Disconnect & Reset Peer ID</button>
-                    </div>
-                </div>
-                <div id="quick-connect-invitation">
-                    <div>
-                        <p>Invitation to TreeHouse detected: </p>
-                        <button id="join-quick-connect">Connect</button>
                     </div>
                 </div>
             </div>
