@@ -105,9 +105,42 @@ document.addEventListener('contextmenu', function(e){
     e.preventDefault();
 }, false);
 
-// Generate Invitation Button
+// Add Friend Button
 const invitationLinkBtn = document.getElementById("invitationLinkBtn");
-invitationLinkBtn.addEventListener('click', async () => {
+invitationLinkBtn.addEventListener('click', () => {
+    document.getElementById('add-friend-row').style.display = 'block';
+    invitationLinkBtn.style.display = 'none';
+});
+
+// Send Friend Request Button
+const sendFriendRequestBtn = document.getElementById("send-friend-request-btn");
+sendFriendRequestBtn.addEventListener('click', async () => {
+    const identifier = document.getElementById('friend-identifier-input').value.trim();
+    if (!identifier) return;
+
+    const actor = await getCardinalActor();
+    const result = await actor.sendFriendRequest(identifier);
+    if ('ok' in result) {
+        alert('Friend request sent!');
+        document.getElementById('friend-identifier-input').value = '';
+        document.getElementById('add-friend-row').style.display = 'none';
+        invitationLinkBtn.style.display = 'block';
+    } else {
+        alert('Error: ' + result.err);
+    }
+});
+
+// Cancel Add Friend Button
+const cancelAddFriendBtn = document.getElementById("cancel-add-friend-btn");
+cancelAddFriendBtn.addEventListener('click', () => {
+    document.getElementById('friend-identifier-input').value = '';
+    document.getElementById('add-friend-row').style.display = 'none';
+    invitationLinkBtn.style.display = 'block';
+});
+
+// Generate Invitation Link Button
+const generateInviteBtn = document.getElementById('generateInviteBtn');
+generateInviteBtn.addEventListener('click', async () => {
     const actor = await getCardinalActor();
     const token = await actor.generateFriendInvitation();
     const invitationLink = `${window.location.origin}/?invite=${token}`;
@@ -134,7 +167,7 @@ export async function handleInvitation() {
     }
 }
 
-// Function to update and display the friends list
+// Function to update and display the friends list and pending requests
 export async function updateFriendsList() {
     const actor = await getCardinalActor();
     if (!actor) {
@@ -142,6 +175,76 @@ export async function updateFriendsList() {
         return;
     }
     const friends = await actor.getFriends();
+    const pendingRequests = await actor.getPendingFriendRequests();
+
+    // Update pending requests
+    const pendingRequestsDiv = document.getElementById('pending-requests');
+    pendingRequestsDiv.innerHTML = '';
+    if (pendingRequests.length > 0) {
+        const pendingTitle = document.createElement('h3');
+        pendingTitle.textContent = 'Pending Friend Requests';
+        pendingRequestsDiv.appendChild(pendingTitle);
+
+        const pendingTable = document.createElement('table');
+        pendingTable.style.border = '1px solid black';
+        const pendingHeaderRow = document.createElement('tr');
+
+        const pendingHeaderFrom = document.createElement('th');
+        pendingHeaderFrom.textContent = 'From';
+        pendingHeaderFrom.style.border = '1px solid black';
+
+        const pendingHeaderActions = document.createElement('th');
+        pendingHeaderActions.textContent = 'Actions';
+        pendingHeaderActions.style.border = '1px solid black';
+
+        pendingHeaderRow.appendChild(pendingHeaderFrom);
+        pendingHeaderRow.appendChild(pendingHeaderActions);
+        pendingTable.appendChild(pendingHeaderRow);
+
+        pendingRequests.forEach(request => {
+            const row = document.createElement('tr');
+
+            const cellFrom = document.createElement('td');
+            cellFrom.textContent = request.from.toText();
+            cellFrom.style.border = '1px solid black';
+
+            const cellActions = document.createElement('td');
+            cellActions.style.border = '1px solid black';
+
+            const acceptBtn = document.createElement('button');
+            acceptBtn.textContent = 'Accept';
+            acceptBtn.style.margin = '5px';
+            acceptBtn.addEventListener('click', async () => {
+                const result = await actor.acceptFriendRequest(request.from);
+                if ('ok' in result) {
+                    alert('Friend request accepted!');
+                    await updateFriendsList();
+                } else {
+                    alert('Error: ' + result.err);
+                }
+            });
+
+            const declineBtn = document.createElement('button');
+            declineBtn.textContent = 'Decline';
+            declineBtn.style.margin = '5px';
+            declineBtn.addEventListener('click', async () => {
+                const result = await actor.declineFriendRequest(request.from);
+                if ('ok' in result) {
+                    await updateFriendsList();
+                } else {
+                    alert('Error: ' + result.err);
+                }
+            });
+
+            cellActions.appendChild(acceptBtn);
+            cellActions.appendChild(declineBtn);
+            row.appendChild(cellFrom);
+            row.appendChild(cellActions);
+            pendingTable.appendChild(row);
+        });
+        pendingRequestsDiv.appendChild(pendingTable);
+    }
+
     const friendsList = document.getElementById('friends-list');
     friendsList.innerHTML = ''; // Clear existing content
 

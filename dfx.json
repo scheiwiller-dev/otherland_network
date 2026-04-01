@@ -2,7 +2,10 @@
   "canisters": {
     "cardinal": {
       "main": "src/otherland_network/cardinal.mo",
-      "type": "motoko"
+      "type": "motoko",
+      "upgrade_options": {
+        "wasm_memory_persistence": "enabled"
+      }
     },
     "user_node": {
       "main": "src/otherland_network/user_node.mo",

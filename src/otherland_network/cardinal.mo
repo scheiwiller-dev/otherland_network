@@ -28,6 +28,7 @@ persistent actor Cardinal {
   type Message        = Types.Message;
   type NodeStatus     = Types.NodeStatus;
   type Invitation      = Types.Invitation;
+  type FriendRequest   = Types.FriendRequest;
   type AuditLogEntry   = Types.AuditLogEntry;
   type CanisterDetails = Types.CanisterDetails;
 
@@ -44,6 +45,7 @@ persistent actor Cardinal {
   var isWasmReady : Bool = false;
   var accessControlEntries : [(Principal, [(Principal, ())])] = [];
   var friendListsEntries : [(Principal, [Principal])] = [];
+  var friendRequestsEntries : [(Principal, [FriendRequest])] = [];
   var invitationsEntries : [(Text, Invitation)] = [];
   var invitationCounter : Nat = 0;
   var nodeVisibilityEntries : [(Principal, Bool)] = [];
@@ -67,6 +69,10 @@ persistent actor Cardinal {
   );
   transient var friendLists = Map.fromIter<Principal, [Principal]>(
     friendListsEntries.vals(),
+    principalCompare
+  );
+  transient var friendRequests = Map.fromIter<Principal, [FriendRequest]>(
+    friendRequestsEntries.vals(),
     principalCompare
   );
   transient var invitations = Map.fromIter<Text, Invitation>(
@@ -97,6 +103,7 @@ persistent actor Cardinal {
       )
     );
     friendListsEntries := Iter.toArray(friendLists.entries());
+    friendRequestsEntries := Iter.toArray(friendRequests.entries());
     invitationsEntries := Iter.toArray(invitations.entries());
     nodeVisibilityEntries := Iter.toArray(nodeVisibility.entries());
     blockedUsersEntries := Iter.toArray(
@@ -124,6 +131,10 @@ persistent actor Cardinal {
     );
     friendLists := Map.fromIter<Principal, [Principal]>(
       friendListsEntries.vals(),
+      principalCompare
+    );
+    friendRequests := Map.fromIter<Principal, [FriendRequest]>(
+      friendRequestsEntries.vals(),
       principalCompare
     );
     invitations := Map.fromIter<Text, Invitation>(
@@ -238,7 +249,131 @@ persistent actor Cardinal {
       case null { [] };
     };
   };
-  
+
+  // Send friend request by username or principal
+  public shared({ caller }) func sendFriendRequest(identifier: Text) : async Result.Result<(), Text> {
+    // Try to parse as principal first
+    let targetPrincipal = try {
+      Principal.fromText(identifier)
+    } catch (_) {
+      // If not a valid principal, treat as username
+      switch (usernames.get(Text.compare, identifier)) {
+        case (?p) { p };
+        case null { return #err("Username not found or invalid principal") };
+      };
+    };
+
+    // Check if already friends
+    switch (friendLists.get(principalCompare, caller)) {
+      case (?friends) {
+        if (Option.isSome(Array.find(friends, func(f) { f == targetPrincipal }))) {
+          return #err("Already friends");
+        };
+      };
+      case null {};
+    };
+
+    // Check if request already exists
+    switch (friendRequests.get(principalCompare, targetPrincipal)) {
+      case (?requests) {
+        if (Option.isSome(Array.find(requests, func(r) { r.from == caller }))) {
+          return #err("Friend request already sent");
+        };
+      };
+      case null {};
+    };
+
+    // Add request to target's pending requests
+    let request : FriendRequest = {
+      from = caller;
+      to = targetPrincipal;
+      timestamp = Time.now();
+    };
+
+    switch (friendRequests.get(principalCompare, targetPrincipal)) {
+      case (?requests) {
+        let newRequests = Array.tabulate(requests.size() + 1, func(i : Nat) : FriendRequest {
+          if (i < requests.size()) requests[i] else request
+        });
+        friendRequests.add(principalCompare, targetPrincipal, newRequests);
+      };
+      case null {
+        friendRequests.add(principalCompare, targetPrincipal, [request]);
+      };
+    };
+
+    #ok(())
+  };
+
+  // Get pending friend requests
+  public query({ caller }) func getPendingFriendRequests() : async [FriendRequest] {
+    switch (friendRequests.get(principalCompare, caller)) {
+      case (?requests) { requests };
+      case null { [] };
+    };
+  };
+
+  // Accept friend request
+  public shared({ caller }) func acceptFriendRequest(from: Principal) : async Result.Result<(), Text> {
+    switch (friendRequests.get(principalCompare, caller)) {
+      case (?requests) {
+        switch (Array.find(requests, func(r) { r.from == from })) {
+          case (?_) {
+            // Add to each other's friend lists
+            // Add to caller's friends
+            switch (friendLists.get(principalCompare, caller)) {
+              case (?friends) {
+                let existing = Array.find(friends, func(f) { f == from });
+                if (existing == null) {
+                  let newFriends = Array.tabulate(friends.size() + 1, func(i : Nat) : Principal {
+                    if (i < friends.size()) friends[i] else from
+                  });
+                  friendLists.add(principalCompare, caller, newFriends);
+                };
+              };
+              case null {
+                friendLists.add(principalCompare, caller, [from]);
+              };
+            };
+            // Add to sender's friends
+            switch (friendLists.get(principalCompare, from)) {
+              case (?friends) {
+                let existing = Array.find(friends, func(f) { f == caller });
+                if (existing == null) {
+                  let newFriends = Array.tabulate(friends.size() + 1, func(i : Nat) : Principal {
+                    if (i < friends.size()) friends[i] else caller
+                  });
+                  friendLists.add(principalCompare, from, newFriends);
+                };
+              };
+              case null {
+                friendLists.add(principalCompare, from, [caller]);
+              };
+            };
+            // Remove the request
+            let newRequests = Array.filter(requests, func(r) { r.from != from });
+            friendRequests.add(principalCompare, caller, newRequests);
+            #ok(())
+          };
+          case null { #err("No such friend request") };
+        };
+      };
+      case null { #err("No pending requests") };
+    };
+  };
+
+  // Decline friend request
+  public shared({ caller }) func declineFriendRequest(from: Principal) : async Result.Result<(), Text> {
+    switch (friendRequests.get(principalCompare, caller)) {
+      case (?requests) {
+        let newRequests = Array.filter(requests, func(r) { r.from != from });
+        friendRequests.add(principalCompare, caller, newRequests);
+        #ok(())
+      };
+      case null { #err("No pending requests") };
+    };
+  };
+
   // Generate a friend invitation
   public shared({ caller }) func generateFriendInvitation() : async Text {
       let token = Nat.toText(invitationCounter) # "-" # Int.toText(Time.now());
@@ -588,7 +723,7 @@ persistent actor Cardinal {
     Option.isSome(usernames.get(Text.compare, name))
   };
 
-  public shared({ caller }) func registerUsername(name: Text, user: Principal) : async Result.Result<(), Text> {
+  public shared({ caller = _ }) func registerUsername(name: Text, user: Principal) : async Result.Result<(), Text> {
     if (Option.isSome(usernames.get(Text.compare, name))) {
       return #err("Username already taken");
     };

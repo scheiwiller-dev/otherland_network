@@ -89,10 +89,15 @@
                 <!-- Friends List -->
                 <div class="flex-row">
                     <h2>Friend List</h2>
-                    <button id="invitationLinkBtn">Add Friend</button>
+                    <button id="invitationLinkBtn">Generate Invite Link</button>                    <button id="generateInviteBtn">Invite Link</button>                </div>
+                <div id="add-friend-row" style="display: none; margin-bottom: 10px;">
+                    <input type="text" id="friend-identifier-input" placeholder="Enter username or principal" style="margin-right: 10px;">
+                    <button id="send-friend-request-btn">Add</button>
+                    <button id="cancel-add-friend-btn">Cancel</button>
                 </div>
                 <div id="friends-info">
-                    <ul id="friends-list"></ul>
+                    <div id="pending-requests" style="margin-bottom: 20px;"></div>
+                    <div id="friends-list"></div>
                     <p id="invitation-link"></p>
                 </div>
 

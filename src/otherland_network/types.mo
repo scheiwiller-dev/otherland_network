@@ -59,6 +59,12 @@ module {
     expiration : Int;
   };
 
+  public type FriendRequest = {
+    from    : Principal;
+    to      : Principal;
+    timestamp : Int;
+  };
+
   public type CanisterDetails = {
     canisterId : Principal;
     owner      : Principal;
