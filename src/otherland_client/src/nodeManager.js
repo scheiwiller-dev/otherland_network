@@ -1,4 +1,5 @@
 import { Actor, HttpAgent } from '@icp-sdk/core/agent';
+import { Principal } from '@icp-sdk/core/principal';
 import { idlFactory as cardinalIdlFactory } from '../../declarations/cardinal'; // Adjust path based on your project structure
 import { user, authReady, getIdentity } from './user.js';
 import { khetController, getUserNodeActor } from './khet.js';
@@ -88,14 +89,14 @@ export async function getAccessibleCanisters() {
 
 // Refresh Node List
 export async function refreshNodeList() {
-    
+
     // Get updated list of accessible canisters and update nodeSettings
     nodeSettings.availableNodes = await getAccessibleCanisters()
     console.log(nodeSettings.availableNodes);
 
     // Select the table
     const table = document.querySelector('#node-table');
-            
+
     // Clear existing data rows (keep the header row)
     const rows = table.querySelectorAll('tr');
     for (let i = 1; i < rows.length; i++) {
@@ -108,35 +109,55 @@ export async function refreshNodeList() {
     // Populate the table with Node data
     const nodes = nodeSettings.availableNodes;
     if (nodes.length > 0) {
+        const cardinalActor = await getCardinalActor();
+        const nodesWithCycles = await Promise.all(nodes.map(async (node) => {
+            let cycles = 'N/A';
+            try {
+                const status = await cardinalActor.getNodeStatus(Principal.fromText(node.owner));
+                if (status && status[0]) {
+                    cycles = status[0].cycles.toString();
+                }
+            } catch (e) {
+                console.warn('Could not get cycles for', node.owner, e);
+            }
+            return { ...node, cycles };
+        }));
         document.getElementById("node-table").style.display = "block";
-        for (const node of nodes) {
+        for (const node of nodesWithCycles) {
             const tr = document.createElement('tr');
 
             // Highlight the row if the owner is the current user
             if (node.owner === userPrincipal) {
                 tr.style.color = "#00d4ff";
             }
-            
+
             // NodeID column
             const tdId = document.createElement('td');
             tdId.textContent = node.canisterId;
             tr.appendChild(tdId);
-            
+
             // Owner column
             const tdOwner = document.createElement('td');
             tdOwner.textContent = node.owner + (node.isPublic ? " (Public)" : " (Private)");
             tr.appendChild(tdOwner);
-            
+
+            // Cycles column
+            const tdCycles = document.createElement('td');
+            if (node.owner === userPrincipal) {
+                const cyclesNum = Math.round(Number(node.cycles) / 1000000);
+                tdCycles.textContent = cyclesNum.toString().replace(/\B(?=(\d{3})+(?!\d))/g, "'") + ' M';
+            } else {
+                tdCycles.textContent = 'N/A';
+            }
+            tr.appendChild(tdCycles);
+
             // Connect column
             const tdConnect = document.createElement('td');
             const connectNodeBtn = document.createElement('button');
             connectNodeBtn.textContent = "Connect";
             connectNodeBtn.addEventListener('click', async () => {
-
-                // Switch Node Type
                 document.getElementById("enter-node-btn").style.display = "block";
                 if (node.owner === userPrincipal) {
-                
                     await nodeSettings.changeNode({type: 2, id: node.canisterId})
                     document.getElementById("edit-node-btn").style.display = "block";
                     document.getElementById("node-settings-btn").style.display = "block";
@@ -146,7 +167,7 @@ export async function refreshNodeList() {
             });
             tdConnect.appendChild(connectNodeBtn);
             tr.appendChild(tdConnect);
-            
+
             // Append the row to the table
             table.appendChild(tr);
         }
