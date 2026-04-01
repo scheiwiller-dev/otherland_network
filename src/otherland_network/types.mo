@@ -59,4 +59,12 @@ module {
     expiration : Int;
   };
 
+  public type CanisterDetails = {
+    canisterId : Principal;
+    owner      : Principal;
+    username   : Text;
+    isPublic   : Bool;
+    cycles     : ?Nat; // Only provided if caller is the owner
+  };
+
 };

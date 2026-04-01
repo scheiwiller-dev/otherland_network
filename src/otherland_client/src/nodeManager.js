@@ -51,35 +51,37 @@ export async function getAccessibleCanisters() {
 
         // Get Cardinal Actor
         const actor = await getCardinalActor();
-        
-        // Call the updated function, which returns [(Principal, Principal)]
-        const accessibleCanisters = await actor.getAccessibleCanisters();
-        
+
+        // Call the new function that returns detailed info
+        const accessibleCanisters = await actor.getAccessibleCanistersWithDetails();
+
         // Get the user's principal as a string
         const userPrincipal = user.getUserPrincipal();
-        
-        // Find the user's own canister by matching the owner to the user's principal
-        const ownCanister = accessibleCanisters.find(([canisterId, owner]) => owner.toText() === userPrincipal);
+
+        // Find the user's own canister by checking if cycles is provided (only for owner)
+        const ownCanister = accessibleCanisters.find(details => details.cycles !== null);
         if (ownCanister) {
-            nodeSettings.userOwnedNodes = [ownCanister[0].toText()];
+            nodeSettings.userOwnedNodes = [ownCanister.canisterId.toText()];
         } else {
             nodeSettings.userOwnedNodes = [];
         }
-        
-        // Convert the tuple array to an array of objects for easier use
-        const accessibleList = accessibleCanisters.map(([canisterId, owner, isPublic]) => ({
-            canisterId: canisterId.toText(),
-            owner: owner.toText(),
-            isPublic
+
+        // Convert to the old format for compatibility
+        const accessibleList = accessibleCanisters.map(details => ({
+            canisterId: details.canisterId.toText(),
+            owner: details.owner.toText(),
+            isPublic: details.isPublic,
+            username: details.username,
+            cycles: details.cycles
         }));
-        
+
         // Update UI: Show/hide the "request-new-canister" button
         if (!ownCanister) {
             document.getElementById("request-new-canister").style.display = "block";
         } else {
             document.getElementById("request-new-canister").style.display = "none";
         }
-        
+
         return accessibleList;
     } catch (error) {
         console.error('Error getting accessible canisters:', error);
@@ -109,21 +111,8 @@ export async function refreshNodeList() {
     // Populate the table with Node data
     const nodes = nodeSettings.availableNodes;
     if (nodes.length > 0) {
-        const cardinalActor = await getCardinalActor();
-        const nodesWithCycles = await Promise.all(nodes.map(async (node) => {
-            let cycles = 'N/A';
-            try {
-                const status = await cardinalActor.getNodeStatus(Principal.fromText(node.owner));
-                if (status && status[0]) {
-                    cycles = status[0].cycles.toString();
-                }
-            } catch (e) {
-                console.warn('Could not get cycles for', node.owner, e);
-            }
-            return { ...node, cycles };
-        }));
         document.getElementById("node-table").style.display = "block";
-        for (const node of nodesWithCycles) {
+        for (const node of nodes) {
             const tr = document.createElement('tr');
 
             // Highlight the row if the owner is the current user
@@ -138,12 +127,12 @@ export async function refreshNodeList() {
 
             // Owner column
             const tdOwner = document.createElement('td');
-            tdOwner.textContent = node.owner + (node.isPublic ? " (Public)" : " (Private)");
+            tdOwner.textContent = node.username + (node.isPublic ? " (Public)" : " (Private)");
             tr.appendChild(tdOwner);
 
             // Cycles column
             const tdCycles = document.createElement('td');
-            if (node.owner === userPrincipal) {
+            if (node.cycles !== null) {
                 const cyclesNum = Math.round(Number(node.cycles) / 1000000);
                 tdCycles.textContent = cyclesNum.toString().replace(/\B(?=(\d{3})+(?!\d))/g, "'") + ' M';
             } else {

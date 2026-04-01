@@ -20,15 +20,16 @@ import Types "types";
 persistent actor Cardinal {
 
   // Types
-  type Position     = Types.Position;
-  type Size         = Types.Size;
-  type Scale        = Types.Scale;
-  type KhetMetadata = Types.KhetMetadata;
-  type PlayerData   = Types.PlayerData;
-  type Message      = Types.Message;
-  type NodeStatus   = Types.NodeStatus;
-  type Invitation    = Types.Invitation;
-  type AuditLogEntry  = Types.AuditLogEntry;
+  type Position       = Types.Position;
+  type Size           = Types.Size;
+  type Scale          = Types.Scale;
+  type KhetMetadata   = Types.KhetMetadata;
+  type PlayerData     = Types.PlayerData;
+  type Message        = Types.Message;
+  type NodeStatus     = Types.NodeStatus;
+  type Invitation      = Types.Invitation;
+  type AuditLogEntry   = Types.AuditLogEntry;
+  type CanisterDetails = Types.CanisterDetails;
 
   // Compare functions for Map
   func principalCompare(a : Principal, b : Principal) : Order.Order {
@@ -362,6 +363,57 @@ persistent actor Cardinal {
             // No access control entry
           };
         }
+      }
+    };
+    return List.toArray(buf);
+  };
+
+  // Get List of all Canisters with Details (username, cycles only for owner)
+  public shared({ caller }) func getAccessibleCanistersWithDetails() : async [CanisterDetails] {
+    let buf = List.empty<CanisterDetails>();
+    for ((owner, canisterId) in registry.entries()) {
+      let isPublic = switch (nodeVisibility.get(principalCompare, owner)) {
+        case (?val) { val };
+        case null { false };
+      };
+      let hasAccess = if (isPublic or caller == owner) {
+        true
+      } else {
+        switch (accessControl.get(principalCompare, owner)) {
+          case (?allowedMap) {
+            Option.isSome(allowedMap.get(caller))
+          };
+          case null { false };
+        }
+      };
+      if (hasAccess) {
+        // Get username
+        let username = do {
+          var found : ?Text = null;
+          for ((name, u) in usernames.entries()) {
+            if (u == owner) {
+              found := ?name;
+            };
+          };
+          switch (found) {
+            case (?name) { name };
+            case null { Principal.toText(owner) };
+          }
+        };
+        // Get cycles only if caller is owner
+        let cycles = if (caller == owner) {
+          let nodeActor = actor(Principal.toText(canisterId)) : actor { getCyclesBalance : () -> async Nat };
+          ?(try { await nodeActor.getCyclesBalance() } catch (_) { 0 })
+        } else {
+          null
+        };
+        buf.add({
+          canisterId;
+          owner;
+          username;
+          isPublic;
+          cycles;
+        });
       }
     };
     return List.toArray(buf);
