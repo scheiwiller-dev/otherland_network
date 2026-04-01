@@ -14,9 +14,19 @@ jobs:
     steps:
       - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
 
-      - name: Install dfx
-        run: DFX_VERSION=0.31.0 sh -ci "$(curl -fsSL https://internetcomputer.org/install.sh)"
-      
+      - uses: dfinity/setup-dfx@main
+        with:
+          dfx-version: '0.31.0'
+
+      - name: Download moc
+        run: |
+          mkdir -p ~/.cache/dfinity/versions/0.31.0
+          curl -L -o moc.tar.gz https://github.com/dfinity/sdk/releases/download/0.31.0/moc-0.31.0-x86_64-linux.tar.gz
+          tar -xzf moc.tar.gz
+          mv moc ~/.cache/dfinity/versions/0.31.0/
+          chmod +x ~/.cache/dfinity/versions/0.31.0/moc
+          rm moc.tar.gz
+
       - uses: dfinity/setup-mops@main
 
       - name: install mops packages
