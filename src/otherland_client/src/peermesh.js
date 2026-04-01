@@ -1,6 +1,6 @@
 import Peer from 'peerjs';
 import { nodeSettings } from './nodeManager.js';
-import { Principal } from '@dfinity/principal';
+import { Principal } from '@icp-sdk/core/principal';
 import { viewerState } from './index.js';
 import { avatarState } from './avatar.js';
 import { userIsInWorld } from './menu.js';

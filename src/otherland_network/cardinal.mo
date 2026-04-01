@@ -537,12 +537,12 @@ persistent actor Cardinal {
     Option.isSome(usernames.get(Text.compare, name))
   };
 
-  public shared({ caller }) func registerUsername(name: Text) : async Result.Result<(), Text> {
+  public shared({ caller }) func registerUsername(name: Text, user: Principal) : async Result.Result<(), Text> {
     if (Option.isSome(usernames.get(Text.compare, name))) {
       return #err("Username already taken");
     };
-    usernames.add(Text.compare, name, caller);
-    _logAudit(caller, "registerUsername", "Registered username: " # name);
+    usernames.add(Text.compare, name, user);
+    _logAudit(user, "registerUsername", "Registered username: " # name);
     #ok(())
   };
 

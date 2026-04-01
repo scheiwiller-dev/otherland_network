@@ -5,8 +5,8 @@ import RAPIER from '@dimforge/rapier3d-compat';
 import * as esprima from 'esprima';
 
 // Import necessary libraries for parsing and interacting with the Internet Computer
-import { Actor, HttpAgent } from '@dfinity/agent';
-import { Principal } from '@dfinity/principal';
+import { Actor, HttpAgent } from '@icp-sdk/core/agent';
+import { Principal } from '@icp-sdk/core/principal';
 import { idlFactory as userNodeIdlFactory } from '../../declarations/user_node';
 
 // Import Internal Modules

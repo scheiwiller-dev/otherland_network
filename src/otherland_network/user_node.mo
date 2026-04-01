@@ -505,24 +505,24 @@ persistent actor UserNode {
 
     // Set username (only owner)
     public shared({ caller }) func setUsername(newName: Text) : async Result.Result<(), Text> {
-        switch (owner) {
-        case (?own) {
-            if (caller != own) return #err("Only owner can set username");
+        let own = switch (owner) {
+            case (?o) { o };
+            case null { return #err("Owner not set"); };
         };
-        case null { return #err("Owner not set"); };
-        };
+
+        if (caller != own) return #err("Only owner can set username");
 
         // Call Cardinal to check uniqueness
         let cardinal = actor(Principal.toText(cardinalId)) : actor {
             isUsernameTaken : (Text) -> async Bool;
-            registerUsername : (Text) -> async Result.Result<(), Text>;
+            registerUsername : (Text, Principal) -> async Result.Result<(), Text>;
         };
         if (await cardinal.isUsernameTaken(newName)) {
             return #err("Username already taken");
         };
 
         username := ?newName;
-        switch (await cardinal.registerUsername(newName)) {
+        switch (await cardinal.registerUsername(newName, own)) {
             case (#ok(())) { #ok(()) };
             case (#err(msg)) { #err("Failed to register username: " # msg) };
         };

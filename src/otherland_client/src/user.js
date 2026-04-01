@@ -1,5 +1,5 @@
-import { AuthClient } from "@dfinity/auth-client";
-import { AnonymousIdentity } from "@dfinity/agent";
+import { AuthClient } from "@icp-sdk/auth/client";
+import { AnonymousIdentity } from "@icp-sdk/core/agent";
 import { getUserNodeActor } from './khet.js';
 import { handleInvitation, updateFriendsList } from './menu.js';
 import { CANISTER_IDS } from './canisterIds.js';

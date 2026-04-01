@@ -16,16 +16,17 @@
     "src/otherland_client"
   ],
   "devDependencies": {
-    "esprima": "^4.0.1"
+    "esprima": "^4.0.1",
+    "npm-check-updates": "^20.0.0"
   },
   "dependencies": {
-    "@dfinity/agent": "^2.3.0",
-    "@dfinity/auth-client": "^2.3.0",
-    "@dfinity/principal": "^2.3.0",
-    "@dimforge/rapier3d-compat": "^0.15.0",
+    "@dfinity/agent": "^3.4.3",
+    "@dfinity/auth-client": "^3.4.3",
+    "@dfinity/principal": "^3.4.3",
+    "@dimforge/rapier3d-compat": "^0.19.3",
     "@icp-sdk/core": "^5.2.0",
-    "nipplejs": "^0.10.2",
-    "peerjs": "^1.5.4",
-    "three": "^0.175.0"
+    "nipplejs": "^1.0.1",
+    "peerjs": "^1.5.5",
+    "three": "^0.183.2"
   }
 }
