@@ -40,7 +40,7 @@
             <div id="side-bar-buttons">
                 <button id="otherland-btn">Nodes</button>
                 <button id="profile-btn">Profile</button>
-                <button id="store-btn">Store</button>
+                <button id="library-btn">Library</button>
                 <button id="wallet-btn">Wallet</button>
                 <button id="settings-btn">Settings</button>
             </div>
@@ -220,14 +220,35 @@
                 </div>
             </div>
 
-            <!-- Store -->
-            <div id="store-tab" class="tab future-update">
-                <h1>Store</h1>
-                <div>Ad space</div>
-                <div>Portals</div>
-                <div>Khet Objects</div>
-                <div>Avatars</div>
-                <div>NFTs</div>
+            <!-- Library -->
+            <div id="library-tab" class="tab">
+                <h1>Library</h1>
+                
+                <!-- Object Table -->
+                <div id="library-object-list">
+                    <table id="library-object-table">
+                        <thead>
+                            <tr>
+                                <th>Object ID</th>
+                                <th>Description</th>
+                            </tr>
+                        </thead>
+                        <tbody id="library-object-tbody">
+                            <!-- Objects will be populated here -->
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Upload Section -->
+                <div id="library-upload-section">
+                    <h3>Add Object</h3>
+                    <div class="upload-controls">
+                        <input type="file" id="library-upload-input" accept=".glb,.gltf,.obj,.fbx">
+                        <input type="text" id="library-description-input" placeholder="Description">
+                        <button id="library-upload-btn">Upload Object</button>
+                    </div>
+                    <p id="library-upload-message"></p>
+                </div>
             </div>
 
             <!-- Wallet -->
@@ -236,7 +257,6 @@
                 <div>Balance & Report</div>
                 <div>Spending Manager</div>
                 <div>Buy Cycles with ICP/BTC/ETC/SOL/DOGE/Credit card</div>
-                <div>NFT storage</div>
             </div>
 
             <!-- Settings -->

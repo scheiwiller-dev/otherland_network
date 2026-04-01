@@ -115,14 +115,14 @@ invitationLinkBtn.addEventListener('click', () => {
 // Send Friend Request Button
 const sendFriendRequestBtn = document.getElementById("send-friend-request-btn");
 sendFriendRequestBtn.addEventListener('click', async () => {
-    const identifier = document.getElementById('friend-identifier-input').value.trim();
+    const identifier = document.getElementById('friend-identifier-').value.trim();
     if (!identifier) return;
 
     const actor = await getCardinalActor();
     const result = await actor.sendFriendRequest(identifier);
     if ('ok' in result) {
         alert('Friend request sent!');
-        document.getElementById('friend-identifier-input').value = '';
+        document.getElementById('friend-identifier-').value = '';
         document.getElementById('add-friend-row').classList.add('hidden');
         invitationLinkBtn.classList.remove('hidden');
     } else {
@@ -133,7 +133,7 @@ sendFriendRequestBtn.addEventListener('click', async () => {
 // Cancel Add Friend Button
 const cancelAddFriendBtn = document.getElementById("cancel-add-friend-btn");
 cancelAddFriendBtn.addEventListener('click', () => {
-    document.getElementById('friend-identifier-input').value = '';
+    document.getElementById('friend-identifier-').value = '';
     document.getElementById('add-friend-row').classList.add('hidden');
     invitationLinkBtn.classList.remove('hidden');
 });
@@ -142,14 +142,14 @@ cancelAddFriendBtn.addEventListener('click', () => {
 const editUsernameBtn = document.getElementById("edit-username-btn");
 editUsernameBtn.addEventListener('click', () => {
     document.getElementById('edit-username-row').classList.remove('hidden');
-    document.getElementById('edit-username-input').value = user.getUserName() || '';
-    document.getElementById('edit-username-input').focus();
+    document.getElementById('edit-username-').value = user.getUserName() || '';
+    document.getElementById('edit-username-').focus();
 });
 
 // Save Edit Username Button
 const saveEditUsernameBtn = document.getElementById("save-edit-username-btn");
 saveEditUsernameBtn.addEventListener('click', async () => {
-    const newUsername = document.getElementById('edit-username-input').value.trim();
+    const newUsername = document.getElementById('edit-username-').value.trim();
     const errorEl = document.getElementById('edit-username-error');
 
     if (!newUsername || newUsername.length < 3) {
@@ -425,7 +425,7 @@ async function enterWorld() {
     } else {   
         enterViewer();        // Enter the viewer when pointer lock is acquired
     }
-    viewerState.canvas.focus();           // Focus on the canvas for input
+    viewerState.canvas.focus();           // Focus on the canvas for 
 }
 
 // Update Khet Table
@@ -491,7 +491,7 @@ export async function updateKhetTable() {
                 document.getElementById("edit-khet-type").innerHTML = khet.khetType;
                 document.getElementById("edit-khet-id").innerHTML = khet.khetId;
 
-                // Display position and scale to input fields
+                // Display position and scale to  fields
                 document.getElementById('pos-x').value = khet.position[0];
                 document.getElementById('pos-y').value = khet.position[1];
                 document.getElementById('pos-z').value = khet.position[2];
@@ -642,13 +642,13 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // Setup Username Page
     const usernameScreen = document.getElementById('username-screen');
-    const usernameInput = document.getElementById('username-input');
+    const username = document.getElementById('username-');
     const cancelBtn = document.getElementById('cancel-username-btn');
     const saveBtn = document.getElementById('save-username-btn');
     const errorEl = document.getElementById('username-error');
     if (!saveBtn) return;
     saveBtn.addEventListener('click', async () => {
-        const newUsername = usernameInput.value.trim();
+        const newUsername = username.value.trim();
         
         if (!newUsername || newUsername.length < 3) {
             errorEl.textContent = 'Username must be at least 3 characters';
@@ -792,7 +792,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const discardEditButton = document.getElementById("discard-edit-btn");
     discardEditButton.addEventListener('click', async () => {
         
-        // Reset position and scale in input fields
+        // Reset position and scale in  fields
         document.getElementById('pos-x').value = 0;
         document.getElementById('pos-y').value = 0;
         document.getElementById('pos-z').value = 0;
@@ -821,7 +821,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             return;
         }
     
-        // Update position and scale from input fields
+        // Update position and scale from  fields
         khet.position = [
             parseFloat(document.getElementById('pos-x').value) || 0,
             parseFloat(document.getElementById('pos-y').value) || 0,
@@ -973,7 +973,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         } else {   
             enterViewer();        // Enter the viewer when pointer lock is acquired
         }
-        viewerState.canvas.focus();              // Focus on the canvas for input
+        viewerState.canvas.focus();              // Focus on the canvas for 
     });
 
     // **UI Toggle Checkboxes**
@@ -1043,6 +1043,9 @@ document.addEventListener('DOMContentLoaded', async () => {
                 updateProfileDisplay();
                 updateFriendsList();
                 break;
+            case 'library-tab':
+                loadLibraryObjects();
+                break;
         }
     }
 
@@ -1090,9 +1093,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
 
     // Upload WASM module
-    const wasmFileInput = document.getElementById('wasm-file-input');
-    wasmFileInput.addEventListener('change', async () => {
-        const file = wasmFileInput.files[0];
+    const wasmFile = document.getElementById('wasm-file-');
+    wasmFile.addEventListener('change', async () => {
+        const file = wasmFile.files[0];
         if (!file) return;
         if (document.getElementById("wasm-pw").value != "Grail2025") return;
 
@@ -1114,7 +1117,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // Chat Initialization
     const chatMessages = document.getElementById('chat-messages');
-    const chatInput = document.getElementById('chat-input');
+    const chat = document.getElementById('chat-');
     const sendChatBtn = document.getElementById('send-chat-btn');
 
     // Display incoming messages
@@ -1127,20 +1130,20 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // Send message on button click
     sendChatBtn.addEventListener('click', async () => {
-        const text = chatInput.value.trim();
+        const text = chat.value.trim();
         if (text) {
             await chat.sendMessage(text);
-            chatInput.value = ''; // Clear input
+            chat.value = ''; // Clear 
         }
     });
 
     // Send message on Enter key press
-    chatInput.addEventListener('keypress', async (e) => {
+    chat.addEventListener('keypress', async (e) => {
         if (e.key === 'Enter') {
-            const text = chatInput.value.trim();
+            const text = chat.value.trim();
             if (text) {
                 await chat.sendMessage(text);
-                chatInput.value = '';
+                chat.value = '';
             }
         }
     });
@@ -1154,6 +1157,136 @@ document.addEventListener('DOMContentLoaded', async () => {
                 chatMessages.appendChild(msgDiv);
             });
             chatMessages.scrollTop = chatMessages.scrollHeight;
+        });
+    }
+
+    // Library functionality
+    const libraryUploadBtn = document.getElementById('library-upload-btn');
+    const libraryUpload = document.getElementById('library-upload-input');
+    const libraryDescription = document.getElementById('library-description-input');
+
+    // Load library objects from localStorage and display in table
+    function loadLibraryObjects() {
+        const tbody = document.getElementById('library-object-tbody');
+        tbody.innerHTML = ''; // Clear existing rows
+
+        const stored = localStorage.getItem('libraryObjects');
+        const libraryObjects = stored ? JSON.parse(stored) : [];
+
+        if (libraryObjects.length === 0) {
+            document.getElementById('library-object-list').style.display = 'none';
+            return;
+        } else {
+
+            document.getElementById('library-object-list').style.display = 'block';
+            libraryObjects.forEach(obj => {
+                const row = document.createElement('tr');
+
+                const idCell = document.createElement('td');
+                idCell.textContent = obj.id;
+
+                const descCell = document.createElement('td');
+                descCell.textContent = obj.description || obj.filename;
+
+                const actionsCell = document.createElement('td');
+                const deleteBtn = document.createElement('button');
+                deleteBtn.textContent = 'Delete';
+                deleteBtn.className = 'delete-btn';
+                deleteBtn.onclick = () => deleteLibraryObject(obj.id);
+                actionsCell.appendChild(deleteBtn);
+
+                row.appendChild(idCell);
+                row.appendChild(descCell);
+                row.appendChild(actionsCell);
+
+                tbody.appendChild(row);
+            });
+        }
+    }
+
+    // Upload new object to library
+    libraryUploadBtn.addEventListener('click', async () => {
+        const files = libraryUpload.files;
+        if (files.length === 0) {
+            document.getElementById('library-upload-message').textContent = 'No File selected to upload';
+            document.getElementById('library-upload-message').style.display = 'block';
+            console.error('Error uploading file:', error);
+        } else {
+
+            const description = libraryDescription.value.trim();
+            const maxFileSize = 100 * 1024 * 1024; // 100MB limit
+
+            if (file.size > maxFileSize) {
+                document.getElementById('library-upload-message').textContent = `File exceeds the 100MB size limit.`;
+                document.getElementById('library-upload-message').style.display = 'block';
+            } else {
+
+                try {
+                    const objectId = generateObjectId();
+                    const fileData = await readFileAsDataURL(file);
+
+                    const libraryObject = {
+                        id: objectId,
+                        filename: file.name,
+                        description: description || file.name,
+                        data: fileData,
+                        uploadedAt: new Date().toISOString()
+                    };
+
+                    // Save to localStorage
+                    const stored = localStorage.getItem('libraryObjects');
+                    const libraryObjects = stored ? JSON.parse(stored) : [];
+                    libraryObjects.push(libraryObject);
+                    localStorage.setItem('libraryObjects', JSON.stringify(libraryObjects));
+
+                    document.getElementById('library-upload-message').textContent = 'File uploaded successfully!';
+                    document.getElementById('library-upload-message').style.display = 'block';
+                    console.log(`Uploaded ${file.name} to library with ID: ${objectId}`);
+
+                } catch (error) {
+                    console.error('Error uploading file:', error);
+                    document.getElementById('library-upload-message').textContent = `Error uploading File: ${error.message}`;
+                    document.getElementById('library-upload-message').style.display = 'block';
+                }
+            }
+        }
+
+        // Clear selection and description
+        libraryUpload.value = '';
+        libraryDescription.value = '';
+
+        // Refresh display
+        loadLibraryObjects();
+    });
+
+    // Delete object from library
+    function deleteLibraryObject(objectId) {
+        if (!confirm('Are you sure you want to delete this object from your library?')) {
+            return;
+        }
+
+        const stored = localStorage.getItem('libraryObjects');
+        const libraryObjects = stored ? JSON.parse(stored) : [];
+        const filteredObjects = libraryObjects.filter(obj => obj.id !== objectId);
+
+        localStorage.setItem('libraryObjects', JSON.stringify(filteredObjects));
+        loadLibraryObjects();
+
+        console.log(`Deleted object ${objectId} from library`);
+    }
+
+    // Generate unique object ID
+    function generateObjectId() {
+        return 'khet_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+    }
+
+    // Read file as Data URL
+    function readFileAsDataURL(file) {
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = () => resolve(reader.result);
+            reader.onerror = reject;
+            reader.readAsDataURL(file);
         });
     }
 });
