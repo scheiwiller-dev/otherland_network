@@ -16,6 +16,7 @@
     "dotenv": "^17.3.1",
     "sass": "^1.98.0",
     "typescript": "^6.0.2",
+    "esprima": "^4.0.1",
     "vite": "^8.0.3",
     "vite-plugin-environment": "^1.1.3",
     "vite-plugin-static-copy": "^4.0.0",
