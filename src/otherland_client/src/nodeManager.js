@@ -2,8 +2,7 @@ import { Actor, HttpAgent } from '@icp-sdk/core/agent';
 import { Principal } from '@icp-sdk/core/principal';
 import { idlFactory as cardinalIdlFactory } from '../../declarations/cardinal'; // Adjust path based on your project structure
 import { user, authReady, getIdentity } from './user.js';
-import { khetController, getUserNodeActor } from './khet.js';
-import { updateKhetTable } from './menu.js';
+import { khetController, getUserNodeActor, updateKhetTable } from './khet.js';
 import { online } from './peermesh.js'
 import { CANISTER_IDS } from './canisterIds.js';
 

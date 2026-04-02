@@ -1,7 +1,6 @@
 import { AuthClient } from "@icp-sdk/auth/client";
 import { AnonymousIdentity } from "@icp-sdk/core/agent";
 import { getUserNodeActor } from './khet.js';
-import { handleInvitation, updateFriendsList, updateAccountSwitcher } from './menu.js';
 import { CANISTER_IDS } from './canisterIds.js';
 
 // Authentication client instance and identity
@@ -170,7 +169,7 @@ export async function abortUsernameSetup() {
         user.setUserName("");
         localStorage.removeItem('username');
         console.log("Username setup aborted - session cleared, returning to start screen");
-        
+
         // Force UI back to start screen
         document.getElementById('username-screen').style.display = 'none';
         document.getElementById('main-menu').style.display = 'none';
@@ -178,4 +177,64 @@ export async function abortUsernameSetup() {
     } catch (error) {
         console.error("Error during abort:", error);
     }
+}
+
+// Unified account switcher - handles Guest and II-logged-in states with action buttons
+export function updateAccountSwitcher(isGuest = false) {
+    document.getElementById("info-box").style.display = 'block';
+    const accountSwitcher = document.getElementById('account-switcher');
+    accountSwitcher.innerHTML = '';
+
+    const container = document.createElement('div');
+    container.style.textAlign = 'center';
+
+    if (isGuest) {
+        const status = document.createElement('button');
+        status.textContent = 'Guest';
+        status.style.cursor = 'default';
+        container.appendChild(status);
+
+        const loginBtn = document.createElement('button');
+        loginBtn.textContent = 'Login with Internet Identity';
+        loginBtn.style.marginTop = '8px';
+        loginBtn.addEventListener('click', async () => {
+            const { login } = await import('./user.js');
+            await login();   // triggers full II flow (will show username screen if needed)
+        });
+        container.appendChild(loginBtn);
+    } else {
+        // II Logged-in user
+        const username = user.getUserName() && user.getUserName().trim() !== ''
+            ? user.getUserName().trim()
+            : 'Anonymous';
+
+        const status = document.createElement('button');
+        status.innerHTML = `<strong>${username}</strong>`;
+        status.style.cursor = 'default';
+        container.appendChild(status);
+
+        const logoutBtn = document.createElement('button');
+        logoutBtn.textContent = 'Logout';
+        logoutBtn.style.marginTop = '8px';
+        logoutBtn.addEventListener('click', async () => {
+            const { logout } = await import('./user.js');
+            await logout();
+            // Return to clean start screen
+            document.getElementById('main-menu').style.display = 'none';
+            document.getElementById('info-box').style.display = 'none';
+            document.getElementById('start-screen').style.display = 'flex';
+        });
+        container.appendChild(logoutBtn);
+    }
+
+    accountSwitcher.appendChild(container);
+}
+
+// Function to update and display the user profile
+export function updateProfileDisplay() {
+    const usernameDisplay = document.getElementById('username-display');
+    const principalDisplay = document.getElementById('principal-display');
+
+    usernameDisplay.textContent = user.getUserName() || 'Not set';
+    principalDisplay.textContent = user.getUserPrincipal() || 'Not logged in';
 }

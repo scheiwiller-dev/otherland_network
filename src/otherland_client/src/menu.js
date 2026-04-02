@@ -1,13 +1,15 @@
 // Import necessary components
 import { Principal } from '@icp-sdk/core/principal';
 import { viewerState, sceneObjects, worldController, animationMixers, khetState } from './index.js';
-import { khetController, clearAllKhets, getUserNodeActor } from './khet.js';
+import { khetController, clearAllKhets, getUserNodeActor, updateKhetTable, changekhetEditorDrawer } from './khet.js';
 import { nodeSettings, requestNewCanister, refreshNodeList, getAccessibleCanisters, getCardinalActor } from './nodeManager.js';
-import { initAuth, getIdentity, login, user } from './user.js';
+import { initAuth, getIdentity, login, user, updateAccountSwitcher, updateProfileDisplay } from './user.js';
 import { chat, initChat } from './chat.js';
 import { online } from './peermesh.js'
-import { avatarState } from './avatar.js'
+import { avatarState, populateAvatarButtons } from './avatar.js'
 import { animator, isTouchDevice } from './animation.js'
+import { updateFriendsList, handleInvitation } from './friends.js'
+import { loadLibraryObjects, deleteLibraryObject, generateObjectId, readFileAsDataURL } from './library.js'
 
 // Declare Variables
 const startScreen = document.getElementById('start-screen');
@@ -18,54 +20,7 @@ const continueGuestBtn = document.getElementById('continue-guest-btn');
 const tabs = document.querySelectorAll('.tab');
 export let userIsInWorld = false;
 
-// Unified account switcher - handles Guest and II-logged-in states with action buttons
-export function updateAccountSwitcher(isGuest = false) {
-    document.getElementById("info-box").style.display = 'block';
-    accountSwitcher.innerHTML = '';
 
-    const container = document.createElement('div');
-    container.style.textAlign = 'center';
-
-    if (isGuest) {
-        const status = document.createElement('button');
-        status.textContent = 'Guest';
-        status.style.cursor = 'default';
-        container.appendChild(status);
-
-        const loginBtn = document.createElement('button');
-        loginBtn.textContent = 'Login with Internet Identity';
-        loginBtn.style.marginTop = '8px';
-        loginBtn.addEventListener('click', async () => {
-            await login();   // triggers full II flow (will show username screen if needed)
-        });
-        container.appendChild(loginBtn);
-    } else {
-        // II Logged-in user
-        const username = user.getUserName() && user.getUserName().trim() !== ''
-            ? user.getUserName().trim()
-            : 'Anonymous';
-
-        const status = document.createElement('button');
-        status.innerHTML = `<strong>${username}</strong>`;
-        status.style.cursor = 'default';
-        container.appendChild(status);
-
-        const logoutBtn = document.createElement('button');
-        logoutBtn.textContent = 'Logout';
-        logoutBtn.style.marginTop = '8px';
-        logoutBtn.addEventListener('click', async () => {
-            const { logout } = await import('./user.js');
-            await logout();
-            // Return to clean start screen
-            document.getElementById('main-menu').style.display = 'none';
-            document.getElementById('info-box').style.display = 'none';
-            document.getElementById('start-screen').style.display = 'flex';
-        });
-        container.appendChild(logoutBtn);
-    }
-
-    accountSwitcher.appendChild(container);
-}
 
 // Listen for changes in the pointer lock state to manage game menu visibility
 document.addEventListener('pointerlockchange', () => {
@@ -290,159 +245,9 @@ generateInviteBtn.addEventListener('click', async () => {
     document.getElementById('invitation-link').innerText = invitationLink;
 });
 
-// Handle Invitation Acceptance on Page Load
-export async function handleInvitation() {
-    const urlParams = new URLSearchParams(window.location.search);
-    const inviteToken = urlParams.get('invite');
-    if (inviteToken) {
-        const confirmAccept = confirm('Accept friend request?');
-        if (confirmAccept) {
-            const actor = await getCardinalActor();
-            const result = await actor.acceptFriendInvitation(inviteToken);
-            if ('ok' in result) {
-                alert('Friend request accepted');
-                window.history.replaceState({}, document.title, window.location.pathname);
-                await updateFriendsList(); // Refresh list after accepting invitation
-            } else {
-                alert('Error accepting invitation: ' + result.err);
-            }
-        }
-    }
-}
 
-// Function to update and display the user profile
-function updateProfileDisplay() {
-    const usernameDisplay = document.getElementById('username-display');
-    const principalDisplay = document.getElementById('principal-display');
 
-    usernameDisplay.textContent = user.getUserName() || 'Not set';
-    principalDisplay.textContent = user.getUserPrincipal() || 'Not logged in';
-}
 
-// Function to update and display the friends list and pending requests
-export async function updateFriendsList() {
-    const actor = await getCardinalActor();
-    if (!actor) {
-        console.error("Not connected to Cardinal canister");
-        return;
-    }
-    const friends = await actor.getFriends();
-    const pendingRequests = await actor.getPendingFriendRequests();
-
-    // Update pending requests
-    const pendingRequestsDiv = document.getElementById('pending-requests');
-    pendingRequestsDiv.innerHTML = '';
-    if (pendingRequests.length > 0) {
-        const pendingTitle = document.createElement('h3');
-        pendingTitle.textContent = 'Pending Friend Requests';
-        pendingRequestsDiv.appendChild(pendingTitle);
-
-        const pendingTable = document.createElement('table');
-        pendingTable.className = 'friends-table';
-        const pendingHeaderRow = document.createElement('tr');
-
-        const pendingHeaderFrom = document.createElement('th');
-        pendingHeaderFrom.textContent = 'From';
-
-        const pendingHeaderActions = document.createElement('th');
-        pendingHeaderActions.textContent = 'Actions';
-
-        pendingHeaderRow.appendChild(pendingHeaderFrom);
-        pendingHeaderRow.appendChild(pendingHeaderActions);
-        pendingTable.appendChild(pendingHeaderRow);
-
-        pendingRequests.forEach(request => {
-            const row = document.createElement('tr');
-
-            const cellFrom = document.createElement('td');
-            cellFrom.textContent = request.from.toText();
-
-            const cellActions = document.createElement('td');
-
-            const acceptBtn = document.createElement('button');
-            acceptBtn.textContent = 'Accept';
-            acceptBtn.style.margin = '5px';
-            acceptBtn.addEventListener('click', async () => {
-                const result = await actor.acceptFriendRequest(request.from);
-                if ('ok' in result) {
-                    alert('Friend request accepted!');
-                    await updateFriendsList();
-                } else {
-                    alert('Error: ' + result.err);
-                }
-            });
-
-            const declineBtn = document.createElement('button');
-            declineBtn.textContent = 'Decline';
-            declineBtn.style.margin = '5px';
-            declineBtn.addEventListener('click', async () => {
-                const result = await actor.declineFriendRequest(request.from);
-                if ('ok' in result) {
-                    await updateFriendsList();
-                } else {
-                    alert('Error: ' + result.err);
-                }
-            });
-
-            cellActions.appendChild(acceptBtn);
-            cellActions.appendChild(declineBtn);
-            row.appendChild(cellFrom);
-            row.appendChild(cellActions);
-            pendingTable.appendChild(row);
-        });
-        pendingRequestsDiv.appendChild(pendingTable);
-    }
-
-    const friendsList = document.getElementById('friends-list');
-    friendsList.innerHTML = ''; // Clear existing content
-
-    // Create table for friends list
-    const table = document.createElement('table');
-    table.className = 'friends-table';
-    const headerRow = document.createElement('tr');
-
-    const headerPrincipal = document.createElement('th');
-    headerPrincipal.textContent = 'Friend Principal';
-
-    const headerActions = document.createElement('th');
-    headerActions.textContent = 'Actions';
-    
-    headerRow.appendChild(headerPrincipal);
-    headerRow.appendChild(headerActions);
-    table.appendChild(headerRow);
-
-    friends.forEach(principal => {
-        const row = document.createElement('tr');
-        
-        const cellPrincipal = document.createElement('td');
-        cellPrincipal.textContent = principal.toText(); // Assuming principal has a toText() method
-
-        const cellActions = document.createElement('td');
-        
-        const removeBtn = document.createElement('button');
-        removeBtn.textContent = 'Remove';
-        removeBtn.style.margin = '5px';
-        removeBtn.addEventListener('click', async () => {
-            await actor.removeFriend(principal);
-            await updateFriendsList(); // Refresh the list after removal
-        });
-        
-        cellActions.appendChild(removeBtn);
-        row.appendChild(cellPrincipal);
-        row.appendChild(cellActions);
-        table.appendChild(row);
-    });
-    friendsList.appendChild(table);
-
-    const friendsDropdown = document.getElementById('friends-dropdown');
-    friendsDropdown.innerHTML = '<option value="">Select a friend</option>';
-    friends.forEach(principal => {
-        const option = document.createElement('option');
-        option.value = principal.toText();
-        option.textContent = principal.toText();
-        friendsDropdown.appendChild(option);
-    });
-}
 
 // Add Friend to Allowed Users
 document.getElementById('add-friend-access-btn').addEventListener('click', async () => {
@@ -481,118 +286,7 @@ async function enterWorld() {
     viewerState.canvas.focus();           // Focus on the canvas for 
 }
 
-// Update Khet Table
-export async function updateKhetTable() {
 
-    // Select the table
-    const table = document.querySelector('#khet-table');
-            
-    // Clear existing data rows (keep the header row)
-    const rows = table.querySelectorAll('tr');
-    for (let i = 1; i < rows.length; i++) {
-        rows[i].remove();
-    }
-
-    // Load Khets from the backend
-    await khetController.loadAllKhets();
-
-    // Populate the table with Khet data
-    const khets = Object.values(khetController.khets);
-    if (khets.length > 0) {
-        document.getElementById("khet-table").style.display = "block";
-        document.getElementById("clear-khets-btn").style.display = "block";
-        for (const khet of khets) {
-            const tr = document.createElement('tr');
-            
-            // KhetID column
-            const tdId = document.createElement('td');
-            tdId.textContent = khet.khetId;
-            tr.appendChild(tdId);
-            
-            // KhetType column
-            const tdType = document.createElement('td');
-            tdType.textContent = khet.khetType;
-            tr.appendChild(tdType);
-            
-            // Position column
-            const tdPosition = document.createElement('td');
-            tdPosition.textContent = `[${khet.position.join(', ')}]`;
-            tr.appendChild(tdPosition);
-            
-            // Scale column
-            const tdScale = document.createElement('td');
-            tdScale.textContent = `[${khet.scale.join(', ')}]`;
-            tr.appendChild(tdScale);
-            
-            // Code column
-            const tdCode = document.createElement('td');
-            tdCode.textContent = khet.code ? khet.code.join(', ') : '';
-            tr.appendChild(tdCode);
-            
-            // Edit column
-            const tdEdit = document.createElement('td');
-            const editKhetButton = document.createElement('button');
-            editKhetButton.textContent = "Edit";
-            editKhetButton.addEventListener('click', async () => {
-
-                // Switch to Edit Display
-                changekhetEditorDrawer('open');
-                document.getElementById("edit-group").style.display = 'block';
-                document.getElementById("upload-group").style.display = 'none';
-
-                // Display Type and ID
-                document.getElementById("edit-khet-type").innerHTML = khet.khetType;
-                document.getElementById("edit-khet-id").innerHTML = khet.khetId;
-
-                // Display position and scale to  fields
-                document.getElementById('pos-x').value = khet.position[0];
-                document.getElementById('pos-y').value = khet.position[1];
-                document.getElementById('pos-z').value = khet.position[2];
-                document.getElementById('scale-x').value = khet.scale[0];
-                document.getElementById('scale-y').value = khet.scale[1];
-                document.getElementById('scale-z').value = khet.scale[2];
-            });
-            
-            tdEdit.appendChild(editKhetButton);
-            tr.appendChild(tdEdit);
-            
-            // Delete column
-            const tdDelete = document.createElement('td');
-            const deleteKhetButton = document.createElement('button');
-            deleteKhetButton.textContent = "Delete";
-            deleteKhetButton.addEventListener('click', async () => {
-
-                // Delete Khet from Khetcontroller, keep asset in cache
-                await khetController.removeEntry(khet.khetId);
-                console.log('Khet deleted'); // Log confirmation
-                await updateKhetTable();
-            });
-            tdDelete.appendChild(deleteKhetButton);
-            tr.appendChild(tdDelete);
-            
-            // Append the row to the table
-            table.appendChild(tr);
-        }
-    } else {
-        document.getElementById("khet-table").style.display = "none";
-        document.getElementById("clear-khets-btn").style.display = "none";
-    }
-    return;
-}
-
-// Open / Close KhetEditor
-function changekhetEditorDrawer(goal) {
-    if (goal == "open") {
-        document.getElementById("khet-editor").style.bottom = "240px";
-        document.getElementById("draw-up-btn").style.display = "none";
-        document.getElementById("draw-close-btn").style.display = "block";
-    } else if (goal == "close") {
-        document.getElementById("khet-editor").style.bottom = "-20px";
-        document.getElementById("draw-up-btn").style.display = "block";
-        document.getElementById("draw-close-btn").style.display = "none";
-    }
-    return;
-}
 
 // ### Menu Navigation and UI Toggling
 // Wait for the DOM to load before setting up event listeners
@@ -1004,26 +698,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         mapArea.style.display = toggleMap.checked ? 'block' : 'none';
     });
 
-    // **Avatar Selection Buttons**
-    // Populate avatar selection buttons
-    function populateAvatarButtons() {
-        const avatars = khetController.getAvatars();
-        const avatarButtonsContainer = document.getElementById("avatar-container");
-        avatarButtonsContainer.innerHTML = ""; // Clear existing buttons
-        avatars.forEach((avatar, index) => {
-            const button = document.createElement('button');
-            button.textContent = `Avatar ${avatar.khetId}`;
-            button.setAttribute('data-avatar', avatar.khetId);
-            button.addEventListener('click', async () => {
-                console.log(`Selected Avatar ${avatar.khetId}`);
 
-                // Load Avatar
-                await worldController.setAvatar(avatar.khetId, { sceneObjects, animationMixers, khetState }); // Start animation for 1 frame?
-                console.log(`Avatar loaded sucessfully`);
-            });
-            avatarButtonsContainer.appendChild(button);
-        });
-    }
 
     // Main Menu Buttons
     const menuButtons = document.querySelectorAll('#side-bar-buttons button');
@@ -1120,51 +795,10 @@ document.addEventListener('DOMContentLoaded', async () => {
         reader.readAsArrayBuffer(file);
     });
 
-
-
     // Library functionality
     const libraryUploadBtn = document.getElementById('library-upload-btn');
     const libraryUpload = document.getElementById('library-upload-input');
     const libraryDescription = document.getElementById('library-description-input');
-
-    // Load library objects from localStorage and display in table
-    function loadLibraryObjects() {
-        const tbody = document.getElementById('library-object-tbody');
-        tbody.innerHTML = ''; // Clear existing rows
-
-        const stored = localStorage.getItem('libraryObjects');
-        const libraryObjects = stored ? JSON.parse(stored) : [];
-
-        if (libraryObjects.length === 0) {
-            document.getElementById('library-object-list').style.display = 'none';
-            return;
-        } else {
-
-            document.getElementById('library-object-list').style.display = 'block';
-            libraryObjects.forEach(obj => {
-                const row = document.createElement('tr');
-
-                const idCell = document.createElement('td');
-                idCell.textContent = obj.id;
-
-                const descCell = document.createElement('td');
-                descCell.textContent = obj.description || obj.filename;
-
-                const actionsCell = document.createElement('td');
-                const deleteBtn = document.createElement('button');
-                deleteBtn.textContent = 'Delete';
-                deleteBtn.className = 'delete-btn';
-                deleteBtn.onclick = () => deleteLibraryObject(obj.id);
-                actionsCell.appendChild(deleteBtn);
-
-                row.appendChild(idCell);
-                row.appendChild(descCell);
-                row.appendChild(actionsCell);
-
-                tbody.appendChild(row);
-            });
-        }
-    }
 
     // Upload new object to library
     libraryUploadBtn.addEventListener('click', async () => {
@@ -1172,44 +806,44 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (files.length === 0) {
             document.getElementById('library-upload-message').textContent = 'No File selected to upload';
             document.getElementById('library-upload-message').style.display = 'block';
-            console.error('Error uploading file:', error);
+            return;
+        }
+
+        const file = files[0];
+        const description = libraryDescription.value.trim();
+        const maxFileSize = 100 * 1024 * 1024; // 100MB limit
+
+        if (file.size > maxFileSize) {
+            document.getElementById('library-upload-message').textContent = `File exceeds the 100MB size limit.`;
+            document.getElementById('library-upload-message').style.display = 'block';
         } else {
 
-            const description = libraryDescription.value.trim();
-            const maxFileSize = 100 * 1024 * 1024; // 100MB limit
+            try {
+                const objectId = generateObjectId();
+                const fileData = await readFileAsDataURL(file);
 
-            if (file.size > maxFileSize) {
-                document.getElementById('library-upload-message').textContent = `File exceeds the 100MB size limit.`;
+                const libraryObject = {
+                    id: objectId,
+                    filename: file.name,
+                    description: description || file.name,
+                    data: fileData,
+                    uploadedAt: new Date().toISOString()
+                };
+
+                // Save to localStorage
+                const stored = localStorage.getItem('libraryObjects');
+                const libraryObjects = stored ? JSON.parse(stored) : [];
+                libraryObjects.push(libraryObject);
+                localStorage.setItem('libraryObjects', JSON.stringify(libraryObjects));
+
+                document.getElementById('library-upload-message').textContent = 'File uploaded successfully!';
                 document.getElementById('library-upload-message').style.display = 'block';
-            } else {
+                console.log(`Uploaded ${file.name} to library with ID: ${objectId}`);
 
-                try {
-                    const objectId = generateObjectId();
-                    const fileData = await readFileAsDataURL(file);
-
-                    const libraryObject = {
-                        id: objectId,
-                        filename: file.name,
-                        description: description || file.name,
-                        data: fileData,
-                        uploadedAt: new Date().toISOString()
-                    };
-
-                    // Save to localStorage
-                    const stored = localStorage.getItem('libraryObjects');
-                    const libraryObjects = stored ? JSON.parse(stored) : [];
-                    libraryObjects.push(libraryObject);
-                    localStorage.setItem('libraryObjects', JSON.stringify(libraryObjects));
-
-                    document.getElementById('library-upload-message').textContent = 'File uploaded successfully!';
-                    document.getElementById('library-upload-message').style.display = 'block';
-                    console.log(`Uploaded ${file.name} to library with ID: ${objectId}`);
-
-                } catch (error) {
-                    console.error('Error uploading file:', error);
-                    document.getElementById('library-upload-message').textContent = `Error uploading File: ${error.message}`;
-                    document.getElementById('library-upload-message').style.display = 'block';
-                }
+            } catch (error) {
+                console.error('Error uploading file:', error);
+                document.getElementById('library-upload-message').textContent = `Error uploading File: ${error.message}`;
+                document.getElementById('library-upload-message').style.display = 'block';
             }
         }
 
@@ -1221,36 +855,9 @@ document.addEventListener('DOMContentLoaded', async () => {
         loadLibraryObjects();
     });
 
-    // Delete object from library
-    function deleteLibraryObject(objectId) {
-        if (!confirm('Are you sure you want to delete this object from your library?')) {
-            return;
-        }
 
-        const stored = localStorage.getItem('libraryObjects');
-        const libraryObjects = stored ? JSON.parse(stored) : [];
-        const filteredObjects = libraryObjects.filter(obj => obj.id !== objectId);
 
-        localStorage.setItem('libraryObjects', JSON.stringify(filteredObjects));
-        loadLibraryObjects();
 
-        console.log(`Deleted object ${objectId} from library`);
-    }
-
-    // Generate unique object ID
-    function generateObjectId() {
-        return 'khet_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
-    }
-
-    // Read file as Data URL
-    function readFileAsDataURL(file) {
-        return new Promise((resolve, reject) => {
-            const reader = new FileReader();
-            reader.onload = () => resolve(reader.result);
-            reader.onerror = reject;
-            reader.readAsDataURL(file);
-        });
-    }
 
     // Initialize chat
     initChat();
