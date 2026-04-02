@@ -338,6 +338,11 @@ export const worldController = {
             if (this.currentAvatarId === khetId) {
                 this.currentAvatarId = null;
             }
+            if (khet.isAvatar) {
+                avatarState.setAvatarBody(null);
+                avatarState.setAvatarMesh(null);
+                avatarState.setSelectedAvatarId(null);
+            }
         }
     },
 
@@ -413,6 +418,8 @@ export const worldController = {
                 await worldController.setAvatar(avatarId, { scene, sceneObjects, world, animationMixers, khetState });
             } else {
                 console.warn("No avatars available to select automatically.");
+                avatarState.setAvatarBody(null);
+                avatarState.setAvatarMesh(null);
             }
         }
     },
