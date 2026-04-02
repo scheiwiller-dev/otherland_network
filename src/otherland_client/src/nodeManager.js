@@ -1,7 +1,7 @@
 import { Actor, HttpAgent } from '@icp-sdk/core/agent';
 import { Principal } from '@icp-sdk/core/principal';
 import { idlFactory as cardinalIdlFactory } from '../../declarations/cardinal'; // Adjust path based on your project structure
-import { user, authReady, getIdentity } from './user.js';
+import { user, authReady, getIdentity, logout } from './user.js';
 import { khetController, getUserNodeActor, updateKhetTable } from './khet.js';
 import { online } from './peermesh.js'
 import { CANISTER_IDS } from './canisterIds.js';
@@ -84,6 +84,13 @@ export async function getAccessibleCanisters() {
         return accessibleList;
     } catch (error) {
         console.error('Error getting accessible canisters:', error);
+        // Check if it's a certificate verification error, which can happen if the local replica root key changed
+        if (error.message && (error.message.includes('TrustError') || error.message.includes('Certificate verification'))) {
+            console.warn('Certificate verification failed, likely due to changed root key. Logging out to force re-authentication.');
+            await logout();
+            // Optionally, reload the page or show a message
+            window.location.reload();
+        }
         return [];
     }
 }

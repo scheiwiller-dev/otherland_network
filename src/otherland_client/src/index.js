@@ -10,6 +10,7 @@ import { avatarState } from './avatar.js';
 import { animator } from './animation.js';
 import { online } from './peermesh.js';
 import { nodeSettings } from './nodeManager.js';
+import { logout } from './user.js';
 
 // Define Viewer State and init
 export const viewerState = {
@@ -419,7 +420,7 @@ export const worldController = {
     // Function to add a ground plane if no scene objects are loaded
     async loadFallbackGround(nodeSettings) {
         const size = nodeSettings.groundPlaneSize || 100;
-        const color = nodeSettings.groundPlaneColor || 0x888888;
+        const color = nodeSettings.groundPlaneColor || 0x555555;
     
         // Create a physics plane with no mass (static)
         const rigidBodyDesc = RAPIER.RigidBodyDesc.fixed().setTranslation(0, -0.1, 0);
@@ -433,12 +434,22 @@ export const worldController = {
         // Create a visual plane mesh
         const groundGeometry = new THREE.PlaneGeometry(size, size);
         const groundMaterialVisual = new THREE.MeshLambertMaterial({ color: color });
-        const ground = new THREE.Mesh(groundGeometry, groundMaterialVisual);
-        ground.rotation.x = -Math.PI / 2;
-        ground.position.y = 0; // Top of physics ground is at y=0
-        ground.userData = { body: groundBody };
-        viewerState.scene.add(ground);
-        sceneObjects.push(ground);
+        const groundPlane = new THREE.Mesh(groundGeometry, groundMaterialVisual);
+        groundPlane.rotation.x = -Math.PI / 2; // Rotate to lie flat
+        groundPlane.position.y = 0; // Top of physics ground is at y=0
+        groundPlane.userData = { body: groundBody };
+        viewerState.scene.add(groundPlane);
+        sceneObjects.push(groundPlane);
         console.log('Loaded fallback ground plane');
     }
 }
+
+// Handle unhandled promise rejections, specifically for certificate verification errors
+window.addEventListener('unhandledrejection', async event => {
+    if (event.reason && event.reason.message && (event.reason.message.includes('TrustError') || event.reason.message.includes('Certificate verification'))) {
+        console.warn('Unhandled certificate verification error, likely due to changed root key. Logging out to force re-authentication.');
+        event.preventDefault(); // Prevent the error from being logged as unhandled
+        await logout();
+        window.location.reload();
+    }
+});
