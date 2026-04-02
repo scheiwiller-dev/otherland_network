@@ -328,8 +328,11 @@ export const worldController = {
     unloadKhet(khetId, scene, world) {
         const khet = this.loadedKhets.get(khetId);
         if (khet) {
-            scene.remove(khet.mesh);
-            viewerState.world.removeRigidBody(khet.body);
+            if (khet.mesh) {
+                scene.remove(khet.mesh);
+                khet.mesh.userData.body = null; // Clear reference
+            }
+            if (khet.body) world.removeRigidBody(khet.body);
             this.loadedKhets.delete(khetId);
             if (this.currentAvatarId === khetId) {
                 this.currentAvatarId = null;
@@ -340,8 +343,11 @@ export const worldController = {
     // Clear all loaded Khets (optional utility)
     clearAllKhets(scene, world) {
         for (const khet of this.loadedKhets.values()) {
-            scene.remove(khet.mesh);
-            world.removeBody(khet.body);
+            if (khet.mesh) {
+                scene.remove(khet.mesh);
+                khet.mesh.userData.body = null; // Clear reference
+            }
+            if (khet.body) world.removeRigidBody(khet.body);
         }
         this.loadedKhets.clear();
         avatarState.setSelectedAvatarId(null);
@@ -349,6 +355,12 @@ export const worldController = {
 
     // Initialize the scene
     async loadScene(params, nodeSettings) {
+        // Clear scene objects array
+        params.sceneObjects.length = 0;
+        params.animationMixers.length = 0;
+        params.khetState.executors.length = 0;
+        // Clear all existing khets to ensure clean slate
+        worldController.clearAllKhets(params.scene, params.world);
         await worldController.syncWithNode(params);
     
         // If no scene objects are loaded, add a fallback ground

@@ -44,6 +44,7 @@ function enterViewer() {
 
 // Leave 3D World
 function leaveViewer() {
+    userIsInWorld = false;
     const gameMenu = document.getElementById('game-menu');
     gameMenu.style.display = 'flex'; // Show the game menu when pointer lock is released
     keys.clear();                    // Clear any active key presses
@@ -412,8 +413,11 @@ document.getElementById('add-friend-access-btn').addEventListener('click', async
 
 // Function to enter the 3d World
 async function enterWorld() {
+    // Stop animator to prevent physics stepping during scene loading
+    animator.stop();
+
     // Define the parameters for loadScene and loadAvatarObject
-    const params = { sceneObjects, animationMixers, khetState };
+    const params = { scene: viewerState.scene, world: viewerState.world, sceneObjects, animationMixers, khetState };
 
     // Load Scene with params and nodeSettings
     await worldController.loadScene(params, nodeSettings);
@@ -712,10 +716,11 @@ document.addEventListener('DOMContentLoaded', async () => {
     const enterTreehouseBtn = document.getElementById('enter-treehouse-btn');
     enterTreehouseBtn.addEventListener('click', async () => {
 
-        // Switch Node Type
-        if (nodeSettings.nodeType == 0 || nodeSettings.nodeType == 1) {
-            enterWorld();
+        // Switch Node Type to own TreeHouse if not already
+        if (nodeSettings.nodeType !== 0) {
+            await nodeSettings.changeNode({type: 0, id: "TreeHouse"});
         }
+        enterWorld();
     });
 
     // Join QuickConnect Button

@@ -191,6 +191,8 @@ async function queryPlayerPositions() {
 export const animator = {
 
     isAnimating: false,
+    positionInterval: null,
+    queryInterval: null,
 
     // Start animation Loop
     start() {
@@ -202,7 +204,7 @@ export const animator = {
         if (!this.isAnimating) {
             this.isAnimating = true;
 
-            const positionInterval = setInterval(() => {
+            this.positionInterval = setInterval(() => {
                 const currentTime = performance.now();
                 if (currentTime - lastPositionUpdate >= POSITION_UPDATE_INTERVAL) {
                     sendPositionUpdate(); // Runs async, doesn’t block
@@ -210,7 +212,7 @@ export const animator = {
                 }
             }, 1000);
 
-            const queryInterval = setInterval(() => {
+            this.queryInterval = setInterval(() => {
                 const currentTime = performance.now();
                 if (currentTime - lastPlayerQuery >= PLAYER_QUERY_INTERVAL) {
                     queryPlayerPositions();
@@ -225,8 +227,14 @@ export const animator = {
     // Stop animation Loop
     stop() {
         this.isAnimating = false;
-        clearInterval(positionInterval);
-        clearInterval(queryInterval);
+        if (this.positionInterval) {
+            clearInterval(this.positionInterval);
+            this.positionInterval = null;
+        }
+        if (this.queryInterval) {
+            clearInterval(this.queryInterval);
+            this.queryInterval = null;
+        }
     },
 
     // Animation Loop
