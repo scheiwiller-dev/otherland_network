@@ -18,6 +18,55 @@ const continueGuestBtn = document.getElementById('continue-guest-btn');
 const tabs = document.querySelectorAll('.tab');
 export let userIsInWorld = false;
 
+// Unified account switcher - handles Guest and II-logged-in states with action buttons
+export function updateAccountSwitcher(isGuest = false) {
+    document.getElementById("info-box").style.display = 'block';
+    accountSwitcher.innerHTML = '';
+
+    const container = document.createElement('div');
+    container.style.textAlign = 'center';
+
+    if (isGuest) {
+        const status = document.createElement('button');
+        status.textContent = 'Guest';
+        status.style.cursor = 'default';
+        container.appendChild(status);
+
+        const loginBtn = document.createElement('button');
+        loginBtn.textContent = 'Login with Internet Identity';
+        loginBtn.style.marginTop = '8px';
+        loginBtn.addEventListener('click', async () => {
+            await login();   // triggers full II flow (will show username screen if needed)
+        });
+        container.appendChild(loginBtn);
+    } else {
+        // II Logged-in user
+        const username = user.getUserName() && user.getUserName().trim() !== ''
+            ? user.getUserName().trim()
+            : 'Anonymous';
+
+        const status = document.createElement('button');
+        status.innerHTML = `<strong>${username}</strong>`;
+        status.style.cursor = 'default';
+        container.appendChild(status);
+
+        const logoutBtn = document.createElement('button');
+        logoutBtn.textContent = 'Logout';
+        logoutBtn.style.marginTop = '8px';
+        logoutBtn.addEventListener('click', async () => {
+            const { logout } = await import('./user.js');
+            await logout();
+            // Return to clean start screen
+            document.getElementById('main-menu').style.display = 'none';
+            document.getElementById('info-box').style.display = 'none';
+            document.getElementById('start-screen').style.display = 'flex';
+        });
+        container.appendChild(logoutBtn);
+    }
+
+    accountSwitcher.appendChild(container);
+}
+
 // Listen for changes in the pointer lock state to manage game menu visibility
 document.addEventListener('pointerlockchange', () => {
     if (!document.pointerLockElement) { leaveViewer() } else { enterViewer() }
@@ -560,55 +609,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         page.classList.add('active'); // Activate the selected page
     }
     
-    // Unified account switcher - handles Guest and II-logged-in states with action buttons
-    function updateAccountSwitcher(isGuest = false) {
-        document.getElementById("info-box").style.display = 'block';
-        accountSwitcher.innerHTML = '';
-
-        const container = document.createElement('div');
-        container.style.textAlign = 'center';
-
-        if (isGuest) {
-            const status = document.createElement('button');
-            status.textContent = 'Guest';
-            status.style.cursor = 'default';
-            container.appendChild(status);
-
-            const loginBtn = document.createElement('button');
-            loginBtn.textContent = 'Login with Internet Identity';
-            loginBtn.style.marginTop = '8px';
-            loginBtn.addEventListener('click', async () => {
-                await login();   // triggers full II flow (will show username screen if needed)
-            });
-            container.appendChild(loginBtn);
-        } else {
-            // II Logged-in user
-            const username = user.getUserName() && user.getUserName().trim() !== ''
-                ? user.getUserName().trim()
-                : 'Anonymous';
-
-            const status = document.createElement('button');
-            status.innerHTML = `<strong>${username}</strong>`;
-            status.style.cursor = 'default';
-            container.appendChild(status);
-
-            const logoutBtn = document.createElement('button');
-            logoutBtn.textContent = 'Logout';
-            logoutBtn.style.marginTop = '8px';
-            logoutBtn.addEventListener('click', async () => {
-                const { logout } = await import('./user.js');
-                await logout();
-                // Return to clean start screen
-                document.getElementById('main-menu').style.display = 'none';
-                document.getElementById('info-box').style.display = 'none';
-                document.getElementById('start-screen').style.display = 'flex';
-            });
-            container.appendChild(logoutBtn);
-        }
-
-        accountSwitcher.appendChild(container);
-    }
-
     // Unified function to show logged-in state
     function showLoggedInUI() {
         document.getElementById('start-screen').style.display = 'none';

@@ -33,7 +33,6 @@ const minPitch = (-85 * Math.PI) / 180;
 
 let moveDirection = { x: 0, y: 0 }; // Joystick
 let isSprinting = false;
-let lastPosition = [null, null, null];
 
 // Touch control setup for mobile devices
 if (isTouchDevice) {
@@ -486,11 +485,6 @@ export const animator = {
                         }
                     });
                     online.lastSendTime = currentTime;
-
-                    /* if (position[0] !== lastPosition[0] || position[2] !== lastPosition[2]) {
-                        
-                    }
-                    lastPosition = position; */
                 }
             } else {
 

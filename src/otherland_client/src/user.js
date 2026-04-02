@@ -1,7 +1,7 @@
 import { AuthClient } from "@icp-sdk/auth/client";
 import { AnonymousIdentity } from "@icp-sdk/core/agent";
 import { getUserNodeActor } from './khet.js';
-import { handleInvitation, updateFriendsList } from './menu.js';
+import { handleInvitation, updateFriendsList, updateAccountSwitcher } from './menu.js';
 import { CANISTER_IDS } from './canisterIds.js';
 
 // Authentication client instance and identity
@@ -97,15 +97,7 @@ export async function login() {
                     
                     document.getElementById('start-screen').style.display = 'none';
                     document.getElementById('main-menu').style.display = 'block';
-                    
-                    // Use the unified function from menu.js (it will be available after DOMContentLoaded)
-                    if (typeof showLoggedInUI === 'function') {
-                        showLoggedInUI();
-                    } else {
-                        document.getElementById('start-screen').style.display = 'none';
-                        document.getElementById('main-menu').style.display = 'block';
-                        document.getElementById('info-box').style.display = 'block';
-                    }
+                    updateAccountSwitcher(false);
                 }
                 // else: username screen is shown - it will handle continuation after save
             },
