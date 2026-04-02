@@ -431,12 +431,11 @@ export const worldController = {
         viewerState.world.createCollider(colliderDesc, groundBody);
         groundBody.userData = { type: 'sceneObject' };
     
-        // Create a visual plane mesh
-        const groundGeometry = new THREE.PlaneGeometry(size, size);
+        // Create a visual plane mesh using BoxGeometry for a flat horizontal surface
+        const groundGeometry = new THREE.BoxGeometry(size, 0.1, size);
         const groundMaterialVisual = new THREE.MeshLambertMaterial({ color: color });
         const groundPlane = new THREE.Mesh(groundGeometry, groundMaterialVisual);
-        groundPlane.rotation.x = -Math.PI / 2; // Rotate to lie flat
-        groundPlane.position.y = 0; // Top of physics ground is at y=0
+        groundPlane.position.y = -0.05; // Top of the visual ground at y=0 (physics ground is at y=-0.1)
         groundPlane.userData = { body: groundBody };
         viewerState.scene.add(groundPlane);
         sceneObjects.push(groundPlane);
