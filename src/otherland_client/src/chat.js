@@ -51,3 +51,49 @@ export const chat = {
         return [];
     }
 };
+
+export function initChat() {
+    const chatMessages = document.getElementById('chat-messages');
+    const chatInput = document.getElementById('chat-input');
+    const sendChatBtn = document.getElementById('send-chat-btn');
+
+    // Set up onMessage listener for displaying
+    chat.onMessage((message) => {
+        const messageElement = document.createElement('div');
+        messageElement.textContent = `[${new Date(message.timestamp).toLocaleTimeString()}] ${message.sender}: ${message.text}`;
+        chatMessages.appendChild(messageElement);
+        chatMessages.scrollTop = chatMessages.scrollHeight;
+    });
+
+    // Send on button click
+    sendChatBtn.addEventListener('click', async () => {
+        const text = chatInput.value.trim();
+        if (text) {
+            await chat.sendMessage(text);
+            chatInput.value = '';
+        }
+    });
+
+    // Send on Enter
+    chatInput.addEventListener('keypress', async (e) => {
+        if (e.key === 'Enter') {
+            const text = chatInput.value.trim();
+            if (text) {
+                await chat.sendMessage(text);
+                chatInput.value = '';
+            }
+        }
+    });
+
+    // Fetch history for canister mode
+    if (nodeSettings.nodeType === 2 || nodeSettings.nodeType === 3) {
+        chat.getMessageHistory().then(history => {
+            history.forEach(message => {
+                const messageElement = document.createElement('div');
+                messageElement.textContent = `[${new Date(message.timestamp).toLocaleTimeString()}] ${message.sender}: ${message.text}`;
+                chatMessages.appendChild(messageElement);
+            });
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        });
+    }
+}

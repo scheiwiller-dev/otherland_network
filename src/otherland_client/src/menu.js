@@ -4,7 +4,7 @@ import { viewerState, sceneObjects, worldController, animationMixers, khetState 
 import { khetController, clearAllKhets, getUserNodeActor } from './khet.js';
 import { nodeSettings, requestNewCanister, refreshNodeList, getAccessibleCanisters, getCardinalActor } from './nodeManager.js';
 import { initAuth, getIdentity, login, user } from './user.js';
-import { chat } from './chat.js';
+import { chat, initChat } from './chat.js';
 import { online } from './peermesh.js'
 import { avatarState } from './avatar.js'
 import { animator, isTouchDevice } from './animation.js'
@@ -1115,50 +1115,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         reader.readAsArrayBuffer(file);
     });
 
-    // Chat Initialization
-    const chatMessages = document.getElementById('chat-messages');
-    const chat = document.getElementById('chat-input');
-    const sendChatBtn = document.getElementById('send-chat-btn');
 
-    // Display incoming messages
-    chat.onMessage((message) => {
-        const msgDiv = document.createElement('div');
-        msgDiv.textContent = `[${new Date(message.timestamp).toLocaleTimeString()}] ${message.sender}: ${message.text}`;
-        chatMessages.appendChild(msgDiv);
-        chatMessages.scrollTop = chatMessages.scrollHeight; // Auto-scroll to latest message
-    });
-
-    // Send message on button click
-    sendChatBtn.addEventListener('click', async () => {
-        const text = chat.value.trim();
-        if (text) {
-            await chat.sendMessage(text);
-            chat.value = ''; // Clear 
-        }
-    });
-
-    // Send message on Enter key press
-    chat.addEventListener('keypress', async (e) => {
-        if (e.key === 'Enter') {
-            const text = chat.value.trim();
-            if (text) {
-                await chat.sendMessage(text);
-                chat.value = '';
-            }
-        }
-    });
-
-    // Fetch message history if in canister mode
-    if (nodeSettings.nodeType === 2 || nodeSettings.nodeType === 3) {
-        chat.getMessageHistory().then(history => {
-            history.forEach(message => {
-                const msgDiv = document.createElement('div');
-                msgDiv.textContent = `[${new Date(message.timestamp).toLocaleTimeString()}] ${message.sender}: ${message.text}`;
-                chatMessages.appendChild(msgDiv);
-            });
-            chatMessages.scrollTop = chatMessages.scrollHeight;
-        });
-    }
 
     // Library functionality
     const libraryUploadBtn = document.getElementById('library-upload-btn');
@@ -1289,4 +1246,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             reader.readAsDataURL(file);
         });
     }
+
+    // Initialize chat
+    initChat();
 });
