@@ -30,7 +30,7 @@ export const viewerState = {
     async init () {
 
         // Initialize Rapier physics world
-        await RAPIER.init();
+        await RAPIER.init({});
         const gravity = new RAPIER.Vector3(0.0, -9.82, 0.0);
         this.world = new RAPIER.World(gravity);
 

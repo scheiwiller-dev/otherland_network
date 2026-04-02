@@ -13,7 +13,7 @@ import { triggerInteraction, preApprovedFunctions } from './interaction.js';
 import { online } from './peermesh.js';
 
 const animationMixers = [];
-const clock = new THREE.Clock();
+const timer = new THREE.Timer();
 
 // Detect if the device supports touch input
 export const isTouchDevice = 'ontouchstart' in window;
@@ -243,7 +243,8 @@ export const animator = {
 
         // Step in Time
         requestAnimationFrame(animator.animate);
-        const delta = clock.getDelta();
+        timer.update();
+        const delta = timer.getDelta();
         viewerState.world.step(viewerState.eventQueue, delta);
 
         // Execute Khet Code
