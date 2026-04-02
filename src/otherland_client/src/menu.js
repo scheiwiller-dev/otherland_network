@@ -20,7 +20,44 @@ const continueGuestBtn = document.getElementById('continue-guest-btn');
 const tabs = document.querySelectorAll('.tab');
 export let userIsInWorld = false;
 
+// Main Menu Buttons
+const menuButtons = document.querySelectorAll('#side-bar-buttons button');
+menuButtons.forEach(button => {
+    button.addEventListener('click', () => {
+        const tabId = button.id.replace('-btn', '-tab');
+        showTab(tabId);
+    });
+});
 
+// Function to show a specific tab
+function showTab(tabId) {
+    tabs.forEach(tab => {
+        tab.style.display = tab.id === tabId ? 'block' : 'none';
+    });
+    switch (tabId) {
+        case 'otherland-tab':
+            refreshNodeList();
+            updateFriendsList();
+            break;
+        case 'profile-tab':
+            updateProfileDisplay();
+            updateFriendsList();
+            break;
+        case 'library-tab':
+            loadLibraryObjects();
+            break;
+    }
+}
+
+// Unified function to show logged-in state
+export function showLoggedInUI() {
+    document.getElementById('start-screen').style.display = 'none';
+    document.getElementById('main-menu').style.display = 'block';
+    updateAccountSwitcher(false);
+    showTab("otherland-tab");
+    refreshNodeList();
+    updateFriendsList();
+}
 
 // Listen for changes in the pointer lock state to manage game menu visibility
 document.addEventListener('pointerlockchange', () => {
@@ -301,14 +338,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         settingsPage.classList.remove('active');
         avatarPage.classList.remove('active');
         page.classList.add('active'); // Activate the selected page
-    }
-    
-    // Unified function to show logged-in state
-    function showLoggedInUI() {
-        document.getElementById('start-screen').style.display = 'none';
-        document.getElementById('main-menu').style.display = 'block';
-        updateAccountSwitcher(false); 
-        showTab("otherland-tab")
     }
 
     // **Main Menu**
@@ -698,37 +727,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         mapArea.style.display = toggleMap.checked ? 'block' : 'none';
     });
 
-
-
-    // Main Menu Buttons
-    const menuButtons = document.querySelectorAll('#side-bar-buttons button');
-    menuButtons.forEach(button => {
-        button.addEventListener('click', () => {
-            const tabId = button.id.replace('-btn', '-tab');
-            showTab(tabId);
-        });
-    });
-
-    // Function to show a specific tab
-    function showTab(tabId) {
-        tabs.forEach(tab => {
-            tab.style.display = tab.id === tabId ? 'block' : 'none';
-        });
-        switch (tabId) {
-            case 'otherland-tab':
-                refreshNodeList();
-                updateFriendsList();
-                break;
-            case 'profile-tab':
-                updateProfileDisplay();
-                updateFriendsList();
-                break;
-            case 'library-tab':
-                loadLibraryObjects();
-                break;
-        }
-    }
-
     // Initially, show the start screen
     startScreen.style.display = 'flex';
     mainMenu.style.display = 'none';
@@ -854,10 +852,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         // Refresh display
         loadLibraryObjects();
     });
-
-
-
-
 
     // Initialize chat
     initChat();

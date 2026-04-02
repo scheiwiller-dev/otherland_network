@@ -2,6 +2,8 @@ import { AuthClient } from "@icp-sdk/auth/client";
 import { AnonymousIdentity } from "@icp-sdk/core/agent";
 import { getUserNodeActor } from './khet.js';
 import { CANISTER_IDS } from './canisterIds.js';
+import { updateFriendsList, handleInvitation } from './friends.js';
+import { showLoggedInUI } from './menu.js';
 
 // Authentication client instance and identity
 let authClient;
@@ -91,12 +93,8 @@ export async function login() {
                 const usernameReady = await setupUsername();
 
                 if (usernameReady) {
-                    await updateFriendsList();
                     handleInvitation();
-                    
-                    document.getElementById('start-screen').style.display = 'none';
-                    document.getElementById('main-menu').style.display = 'block';
-                    updateAccountSwitcher(false);
+                    showLoggedInUI();
                 }
                 // else: username screen is shown - it will handle continuation after save
             },
