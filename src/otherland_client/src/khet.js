@@ -67,7 +67,7 @@ export async function computeSHA256(data) {
 // IndexedDB Cache Setup
 const DB_NAME = 'KhetCache';
 const STORE_NAME = 'assets';
-const DB_VERSION = 2;
+const DB_VERSION = 3;
 
 function openDB() {
     return new Promise((resolve, reject) => {
@@ -76,7 +76,12 @@ function openDB() {
         request.onsuccess = () => resolve(request.result);
         request.onupgradeneeded = (event) => {
             const db = event.target.result;
-            db.createObjectStore(STORE_NAME, { keyPath: 'id' });
+            if (!db.objectStoreNames.contains(STORE_NAME)) {
+                db.createObjectStore(STORE_NAME, { keyPath: 'id' });
+            }
+            if (!db.objectStoreNames.contains('khets')) {
+                db.createObjectStore('khets', { keyPath: 'id' });
+            }
         };
     });
 }
