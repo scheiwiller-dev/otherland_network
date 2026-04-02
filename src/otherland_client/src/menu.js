@@ -115,14 +115,14 @@ invitationLinkBtn.addEventListener('click', () => {
 // Send Friend Request Button
 const sendFriendRequestBtn = document.getElementById("send-friend-request-btn");
 sendFriendRequestBtn.addEventListener('click', async () => {
-    const identifier = document.getElementById('friend-identifier-').value.trim();
+    const identifier = document.getElementById('friend-identifier-input').value.trim();
     if (!identifier) return;
 
     const actor = await getCardinalActor();
     const result = await actor.sendFriendRequest(identifier);
     if ('ok' in result) {
         alert('Friend request sent!');
-        document.getElementById('friend-identifier-').value = '';
+        document.getElementById('friend-identifier-input').value = '';
         document.getElementById('add-friend-row').classList.add('hidden');
         invitationLinkBtn.classList.remove('hidden');
     } else {
@@ -133,7 +133,7 @@ sendFriendRequestBtn.addEventListener('click', async () => {
 // Cancel Add Friend Button
 const cancelAddFriendBtn = document.getElementById("cancel-add-friend-btn");
 cancelAddFriendBtn.addEventListener('click', () => {
-    document.getElementById('friend-identifier-').value = '';
+    document.getElementById('friend-identifier-input').value = '';
     document.getElementById('add-friend-row').classList.add('hidden');
     invitationLinkBtn.classList.remove('hidden');
 });
@@ -142,14 +142,14 @@ cancelAddFriendBtn.addEventListener('click', () => {
 const editUsernameBtn = document.getElementById("edit-username-btn");
 editUsernameBtn.addEventListener('click', () => {
     document.getElementById('edit-username-row').classList.remove('hidden');
-    document.getElementById('edit-username-').value = user.getUserName() || '';
-    document.getElementById('edit-username-').focus();
+    document.getElementById('edit-username-input').value = user.getUserName() || '';
+    document.getElementById('edit-username-input').focus();
 });
 
 // Save Edit Username Button
 const saveEditUsernameBtn = document.getElementById("save-edit-username-btn");
 saveEditUsernameBtn.addEventListener('click', async () => {
-    const newUsername = document.getElementById('edit-username-').value.trim();
+    const newUsername = document.getElementById('edit-username-input').value.trim();
     const errorEl = document.getElementById('edit-username-error');
 
     if (!newUsername || newUsername.length < 3) {
@@ -642,7 +642,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // Setup Username Page
     const usernameScreen = document.getElementById('username-screen');
-    const username = document.getElementById('username-');
+    const username = document.getElementById('username-input');
     const cancelBtn = document.getElementById('cancel-username-btn');
     const saveBtn = document.getElementById('save-username-btn');
     const errorEl = document.getElementById('username-error');
@@ -1093,7 +1093,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
 
     // Upload WASM module
-    const wasmFile = document.getElementById('wasm-file-');
+    const wasmFile = document.getElementById('wasm-file-input');
     wasmFile.addEventListener('change', async () => {
         const file = wasmFile.files[0];
         if (!file) return;
@@ -1117,7 +1117,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // Chat Initialization
     const chatMessages = document.getElementById('chat-messages');
-    const chat = document.getElementById('chat-');
+    const chat = document.getElementById('chat-input');
     const sendChatBtn = document.getElementById('send-chat-btn');
 
     // Display incoming messages
