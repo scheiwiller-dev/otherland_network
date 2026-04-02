@@ -208,8 +208,8 @@ export const khetController = {
                         console.log(`Loaded gltfData for Khet ${khet.khetId} from cache`);
 
                     } else { // Get 3D data from user_node
-                        const [nodeId, blobId, gltfDataSize] = khet.gltfDataRef;
-                        const CHUNK_SIZE = 1024 * 1024;
+                        const [[nodeId, blobId, gltfDataSize]] = khet.gltfDataRef;
+                        const CHUNK_SIZE = 2000000; // Must match upload chunk size
                         const totalChunks = Math.ceil(Number(gltfDataSize) / CHUNK_SIZE);
                         let gltfDataChunks = [];
                         for (let i = 0; i < totalChunks; i++) {
@@ -239,6 +239,62 @@ export const khetController = {
                 return [];
             }
         }
+    },
+
+    // Fetch gltfData for a specific khet if not already loaded
+    async fetchGltfDataForKhet(khetId) {
+        const khet = this.khets[khetId];
+        if (!khet) {
+            console.error(`Khet ${khetId} not found`);
+            return false;
+        }
+        if (khet.gltfData) {
+            return true; // Already has data
+        }
+
+        // Try cache first
+        const cachedKhet = await getFromCache(khetId);
+        if (cachedKhet && cachedKhet.gltfData) {
+            khet.gltfData = cachedKhet.gltfData;
+            console.log(`Loaded gltfData for Khet ${khetId} from cache`);
+            return true;
+        }
+
+        // Fetch from node
+        if (khet.gltfDataRef && khet.gltfDataRef.length > 0) {
+            const backendActor = await getUserNodeActor();
+            const [[nodeId, blobId, gltfDataSize]] = khet.gltfDataRef;
+
+            console.log(khet.gltfDataRef);
+
+            const CHUNK_SIZE = 2000000; // Must match upload chunk size
+            const totalChunks = Math.ceil(Number(gltfDataSize) / CHUNK_SIZE);
+            let gltfDataChunks = [];
+
+            console.log(totalChunks);
+            
+            for (let i = 0; i < totalChunks; i++) {
+                const chunkOpt = await backendActor.getBlobChunk(blobId, i);
+                if (chunkOpt && chunkOpt.length > 0) {
+                    gltfDataChunks.push(chunkOpt[0]);
+                } else {
+                    console.warn(`Failed to fetch chunk ${i} for Khet ${khetId}`);
+                    return false;
+                }
+            }
+            if (gltfDataChunks.length === totalChunks) {
+                khet.gltfData = new Uint8Array(Number(gltfDataSize));
+                let offset = 0;
+                for (const chunk of gltfDataChunks) {
+                    khet.gltfData.set(new Uint8Array(chunk), offset);
+                    offset += chunk.length;
+                }
+                await saveToCache(khetId, khet);
+                console.log(`Fetched and cached gltfData for Khet ${khetId}`);
+                return true;
+            }
+        }
+        return false;
     },
 
     // Get a specific Khet by ID
@@ -537,7 +593,7 @@ export async function uploadKhet(khet) {
     let blobId;
     if (result.existing) {
         blobId = result.existing;
-        khet.gltfDataRef = [Principal.fromText(nodeSettings.nodeId), blobId, khet.gltfDataSize];
+        khet.gltfDataRef = [[Principal.fromText(nodeSettings.nodeId), blobId, khet.gltfDataSize]];
         console.log(`Khet ${khet.khetId} reusing existing blobId ${blobId}`); // No upload needed; asset already exists
         
 
@@ -551,7 +607,7 @@ export async function uploadKhet(khet) {
 
     } else if (result.new) {
         blobId = result.new;
-        khet.gltfDataRef = [Principal.fromText(nodeSettings.nodeId), blobId, khet.gltfDataSize];
+        khet.gltfDataRef = [[Principal.fromText(nodeSettings.nodeId), blobId, khet.gltfDataSize]];
         console.log(`Khet ${khet.khetId} initialized with new blobId ${blobId}`);
     } else {
         throw new Error('Unexpected response from initKhetUpload');
@@ -638,8 +694,23 @@ export async function loadKhet(khetId, { sceneObjects, animationMixers, khetStat
             return result;
         }
         if (!khet.gltfData) {
-            console.error(`gltfData missing for Khet ${khetId} in khetController`);
-            return result;
+
+            // Show downloading message
+            const downloadContainer = document.getElementById('download-container');
+            const downloadBar = document.getElementById('download-bar');
+            downloadContainer.style.display = 'block';
+            console.log(`Fetching gltfData for Khet ${khetId}`);
+            const success = await khetController.fetchGltfDataForKhet(khetId);
+            if (!success || !khet.gltfData) {
+                console.error(`Failed to fetch gltfData for Khet ${khetId}`);
+                downloadBar.innerHTML = "Error Downloading Asset";
+                setTimeout(() => {
+                    downloadContainer.style.display = 'none';
+                }, 5000);
+                return result;
+            } else {
+                downloadContainer.style.display = 'none';
+            }
         }
 
         const loader = new GLTFLoader();
