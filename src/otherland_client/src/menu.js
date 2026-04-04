@@ -55,7 +55,6 @@ export function showLoggedInUI() {
     document.getElementById('main-menu').style.display = 'block';
     updateAccountSwitcher(false);
     showTab("otherland-tab");
-    refreshNodeList();
     updateFriendsList();
 }
 
@@ -449,12 +448,20 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Join QuickConnect Button
     const joinQuickConnectBtn = document.getElementById("join-quick-connect");
     joinQuickConnectBtn.addEventListener('click', async () => {
-        
+
         // Switch Node Type
         await nodeSettings.changeNode({type: 1, id: "TreeHouse"})
 
         // Connect to Host
         online.openPeer();                                       // Evtl if not already exists from other source check
+    })
+
+    // Enter Friend's TreeHouse Button
+    const enterFriendsTreehouseBtn = document.getElementById("enter-friends-treehouse");
+    enterFriendsTreehouseBtn.addEventListener('click', async () => {
+
+        // Enter the World
+        enterWorld();
     })
 
     // Reset Peer Button

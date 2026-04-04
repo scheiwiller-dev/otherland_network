@@ -152,13 +152,7 @@ export async function refreshNodeList() {
             connectNodeBtn.textContent = "Connect";
             connectNodeBtn.addEventListener('click', async () => {
                 document.getElementById("enter-node-btn").style.display = "block";
-                if (node.owner === userPrincipal) {
-                    await nodeSettings.changeNode({type: 2, id: node.canisterId})
-                    document.getElementById("edit-node-btn").style.display = "block";
-                    document.getElementById("node-settings-btn").style.display = "block";
-                } else {
-                    await nodeSettings.changeNode({type: 3, id: node.canisterId})
-                }
+                await nodeSettings.changeNode({type: node.owner === userPrincipal ? 2 : 3, id: node.canisterId})
             });
             tdConnect.appendChild(connectNodeBtn);
             tr.appendChild(tdConnect);
@@ -262,8 +256,29 @@ export const nodeSettings = {
         this.nodeId = newNode.id;
 
         this.displayNodeConfig();
-        if (this.nodeType == 0 || this.nodeType == 2) {
+
+        document.getElementById("edit-node-btn").style.display = "none";
+        document.getElementById("node-settings-btn").style.display = "none";
+        document.getElementById("enter-friends-treehouse").style.display = "none";
+
+        switch (this.nodeType) {
+        case 0:
             await updateKhetTable();
+            break;
+        case 1:
+            document.getElementById("enter-friends-treehouse").style.display = "block";
+            break;
+        case 2:
+            await updateKhetTable();
+            document.getElementById("edit-node-btn").style.display = "block";
+            document.getElementById("node-settings-btn").style.display = "block";
+            break;
+        case 3:
+            break;
+        case 4:
+            break;
+        default:
+            break;
         }
     },
 
