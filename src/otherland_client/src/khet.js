@@ -229,6 +229,7 @@ export const khetController = {
                                 offset += chunk.length;
                             } 
                         }
+                        await saveToCache(khet.khetId, khet);
                     }
                     allKhets.push(khet);
                 }

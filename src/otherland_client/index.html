@@ -69,10 +69,13 @@
 
                 <h1>TreeHouse</h1>
 
-                <button id="enter-treehouse-btn" class="highlighted">Enter TreeHouse</button>
-
-                <button id="edit-treehouse-btn">Edit Environment</button>
-                <button id="node-config-btn">Settings</button>
+                <div id="treehouse-buttons">
+                    <button id="enter-treehouse-btn" class="highlighted">Enter TreeHouse</button>
+                    <button id="toggle-p2p-btn">Open TreeHouse</button>
+                    <button id="share-th-link-btn">Invite Player</button>
+                    <button id="edit-treehouse-btn">Edit Environment</button>
+                    <button id="node-config-btn">Settings</button>
+                </div>
                 
                 <div id="quick-connect-invitation">
                     <div>
@@ -92,7 +95,7 @@
                     <div id="display-username-row" class="profile-row">
                         <label>Username:</label>
                         <span id="username-display"></span>
-                        <button id="copy-username-btn" title="Copy username">Copy</button>
+                        <button id="copy-username-btn">Copy</button>
                         <button id="edit-username-btn">Change</button>
                     </div>
                     <div id="edit-username-row" class="hidden">
@@ -102,9 +105,15 @@
                         <p id="edit-username-error" class="error-message hidden"></p>
                     </div>
                     <div class="profile-row">
-                        <label>Principal:</label>
+                        <label>Identity:</label>
                         <span id="principal-display"></span>
-                        <button id="copy-principal-btn" title="Copy principal">Copy</button>
+                        <button id="copy-principal-btn">Copy</button>
+                    </div>
+                    <div class="profile-row">
+                        <label>Peer ID:</label>
+                        <span><p id="peerid-display">Generating Peer ID ...</p></span>
+                        <button id="copy-peerid-btn">Copy</button>
+                        <button id="reset-p2p-btn">Reset</button>
                     </div>
                 </div>
 
@@ -128,14 +137,6 @@
                 <!-- Peer to Peer -->
                 <div class="flex-row">
                     <h2>Play with friends</h2>
-                    <button id="toggle-p2p-btn">Off</button>
-                </div>
-                <div id="peer-info">
-                    <p id="user-id-title">Generating Peer ID ...</p>
-                    <div class="flex-row">
-                        <button id="share-th-link-btn">Invite Player</button>
-                        <button id="reset-p2p-btn">Disconnect & Reset Peer ID</button>
-                    </div>
                 </div>
             </div>
 

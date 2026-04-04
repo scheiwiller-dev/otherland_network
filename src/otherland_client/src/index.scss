@@ -305,6 +305,15 @@ canvas {
           display: none;
         }
       }
+      #treehouse-buttons {
+        display: flex;
+        #peer-info {
+          display: none;
+        }
+        #share-th-link-btn {
+          display: none;
+        }
+      }
     }
 
     #quick-connect-invitation {
@@ -330,9 +339,8 @@ canvas {
             max-width: 370px;
           }
 
-          button {
-            margin-left: 10px;
-            width: 110px;
+          #peerid-display {
+            max-width: 250px;
           }
 
           button[id^="copy-"] {
@@ -440,16 +448,6 @@ canvas {
         margin: 0;
         width: 125px;
       }
-    }
-
-    #peer-info {
-      display: none;
-    }
-    #share-th-link-btn {
-      display: none;
-    }
-    #toggle-p2p-btn {
-      margin-left: 40px;
     }
 
     #library-tab {

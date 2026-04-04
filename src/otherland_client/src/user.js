@@ -133,7 +133,7 @@ async function setupUsername() {
                 currentUsername = result && result[0] ? result[0] : null;
                 hasUsername = !!currentUsername;
             } catch (e) {
-                console.warn('Could not read username from actor (new user without node?):', e);
+                console.warn('Could not read username from actor):', e);
             }
         }
 

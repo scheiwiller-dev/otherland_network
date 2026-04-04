@@ -127,22 +127,35 @@ export const online = {
 
     openPeer: function () {
         if (this.ownID === "") {
-            document.getElementById("user-id-title").innerHTML = "Waiting for Peer ID...";
+            document.getElementById("peerid-display").innerHTML = "Waiting for Peer ID...";
+
+            // Check for existing peer ID in localStorage, create new if not present
+            /* let peerId = localStorage.getItem('peerId');
+            if (!peerId) {
+                this.peer = new Peer();
+                localStorage.setItem('peerId', this.peer.id);
+            } else {
+                this.peer = new Peer(peerId);
+            } */
             this.peer = new Peer();
+
             if (nodeSettings.nodeType === 0) {
-                document.getElementById("node-info").innerHTML = "Node: TreeHouse (open)";
                 this.isHosting = true;
                 this.isJoined = false;
-            } else {
+            } else if (nodeSettings.nodeType === 2) {
                 this.isHosting = false;
                 this.isJoined = true;
+            } else {
+                this.isHosting = false;
+                this.isJoined = false;
+                // Set up for network node mode
+                return;
             }
             this.peer.on('connection', (conn) => this.addConnection(conn));
             this.peer.on('open', (id) => {
                 this.ownID = id;
                 console.log("ownID: " + this.ownID);
-                document.getElementById("user-id-title").innerHTML = "Peer ID:<br><br>" + this.ownID;
-                document.getElementById("share-th-link-btn").style.display = "block";
+                document.getElementById("peerid-display").innerHTML = this.ownID;
                 if (this.quickConnect) this.connectToHost(this.remoteID);
             });
             this.peer.on('error', (err) => console.error('PeerJS error:', err));
@@ -591,7 +604,7 @@ export const online = {
         this.remoteAvatars.clear();
         this.remoteAvatarQueue.clear();
         this.peer.destroy();
-        this.ownID = "";
+        this.ownID = "";            // Function to reset peer.id in localstorage to get a new one?
         this.connected = false;
         this.isHosting = false;
         this.isJoined = false;

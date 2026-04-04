@@ -361,12 +361,13 @@ export const worldController = {
 
     // Initialize the scene
     async loadScene(params, nodeSettings) {
+        
         // Clear scene objects array
         params.sceneObjects.length = 0;
         params.animationMixers.length = 0;
         params.khetState.executors.length = 0;
-        // Clear all existing khets to ensure clean slate
-        worldController.clearAllKhets(params.scene, params.world);
+        
+        // Load correct khets for the current node
         await worldController.syncWithNode(params);
     
         // If no scene objects are loaded, add a fallback ground

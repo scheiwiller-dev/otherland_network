@@ -313,19 +313,19 @@ export const nodeSettings = {
         this.displayNodeConfig();
     },
 
-    // Turn P2P on / off
+    // Turn P2P on / off    
+
     togglePeerNetworkAllowed () {
         if (this.peerNetworkAllowed) {
             this.peerNetworkAllowed = false;
-            document.getElementById("toggle-p2p-btn").innerHTML = "Off";
-            document.getElementById("peer-info").style.display = "none";
+            document.getElementById("toggle-p2p-btn").innerHTML = "Open TreeHouse";
+            document.getElementById("share-th-link-btn").style.display = "none";
         } else {
             this.peerNetworkAllowed = true;
-            document.getElementById("toggle-p2p-btn").innerHTML = "On";
-            document.getElementById("peer-info").style.display = "block";
-            khetController.loadAllKhets();
-            online.openPeer();                                       // Evtl if not already exists from other source check
+            document.getElementById("toggle-p2p-btn").innerHTML = "Close TreeHouse";
+            document.getElementById("share-th-link-btn").style.display = "block";
         }
+        this.displayNodeConfig();
     },
 
     // Update Info Box with new Node Configuration
@@ -333,6 +333,11 @@ export const nodeSettings = {
         switch (this.nodeType) {
         case 0:
             document.getElementById("node-info").innerHTML = "Node: My TreeHouse";
+            if (this.peerNetworkAllowed) {
+                document.getElementById("node-info").innerHTML = "Node: My TreeHouse\n(open)";
+            } else {
+                document.getElementById("node-info").innerHTML = "Node: My TreeHouse";
+            }
             break;
         case 1:
             if (this.nodeOwner) {

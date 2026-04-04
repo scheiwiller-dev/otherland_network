@@ -56,6 +56,7 @@ export function showLoggedInUI() {
     updateAccountSwitcher(false);
     showTab("otherland-tab");
     updateFriendsList();
+    online.openPeer();
 }
 
 // Listen for changes in the pointer lock state to manage game menu visibility
@@ -234,7 +235,7 @@ copyUsernameBtn.addEventListener('click', async () => {
     const username = document.getElementById('username-display').textContent;
     if (username && username !== 'Not set') {
         try {
-            await navigator.clipboard.writeText(username);
+            await navigator.clipboard.writeText(online.ownID); // Copy the Peer ID to clipboard
             // Visual feedback
             const originalText = copyUsernameBtn.textContent;
             copyUsernameBtn.textContent = '✓';
@@ -245,7 +246,6 @@ copyUsernameBtn.addEventListener('click', async () => {
             }, 1000);
         } catch (err) {
             console.error('Failed to copy username:', err);
-            alert('Failed to copy username to clipboard');
         }
     }
 });
@@ -267,8 +267,25 @@ copyPrincipalBtn.addEventListener('click', async () => {
             }, 1000);
         } catch (err) {
             console.error('Failed to copy principal:', err);
-            alert('Failed to copy principal to clipboard');
         }
+    }
+});
+
+// Copy Peer ID Button
+const copyPeeridBtn = document.getElementById("copy-peerid-btn");
+copyPeeridBtn.addEventListener('click', async () => {
+    try {
+        await navigator.clipboard.writeText(principal);
+        // Visual feedback
+        const originalText = copyPeeridBtn.textContent;
+        copyPeeridBtn.textContent = '✓';
+        copyPeeridBtn.style.color = '#35bd00';
+        setTimeout(() => {
+            copyPeeridBtn.textContent = originalText;
+            copyPeeridBtn.style.color = '';
+        }, 1000);
+    } catch (err) {
+        console.error('Failed to copy peer ID:', err);
     }
 });
 
