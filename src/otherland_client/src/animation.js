@@ -308,12 +308,24 @@ export const animator = {
                 // Avatar  Movement
                 if (avatarState.isGrounded) {
 
-                    // Grounded movement: set velocity directly
+                    // Grounded movement: use character controller for proper wall sliding
                     const walkSpeed = BASE_SPEED * speedMultiplier;
                     const targetSpeed = walkSpeed * (isTouchDevice ? inputMagnitude : 1);
-                    const targetVelocity = movementDirection.clone().multiplyScalar(targetSpeed);
-                    const currentVel = avatarState.avatarBody.linvel();
-                    avatarState.avatarBody.setLinvel(new RAPIER.Vector3(targetVelocity.x, currentVel.y, targetVelocity.z), true);
+                    const desiredMovement = movementDirection.clone().multiplyScalar(targetSpeed * delta);
+
+                    // Use character controller to compute movement with collision handling
+                    const collider = avatarState.avatarBody.collider(0);
+                    viewerState.characterController.computeColliderMovement(
+                        collider,
+                        new RAPIER.Vector3(desiredMovement.x, 0, desiredMovement.z)
+                    );
+
+                    // Apply the computed movement
+                    const correctedMovement = viewerState.characterController.computedMovement();
+                    const newPosition = avatarState.avatarBody.translation();
+                    newPosition.x += correctedMovement.x;
+                    newPosition.z += correctedMovement.z;
+                    avatarState.avatarBody.setTranslation(newPosition, true);
                     avatarState.avatarBody.wakeUp();
 
                 } else { // In-Air Movement
