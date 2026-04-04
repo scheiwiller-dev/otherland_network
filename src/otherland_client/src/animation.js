@@ -240,8 +240,13 @@ export const animator = {
     animate() {
         if (!animator.isAnimating) return;
 
-        // Step in Time
+        // Use regular animation loop - Three.js XR handles VR rendering automatically
+        // when renderer.xr.setSession() is called
         requestAnimationFrame(animator.animate);
+        animator.renderFrame();
+    },
+
+    renderFrame() {
         timer.update();
         const delta = timer.getDelta();
         viewerState.world.step(viewerState.eventQueue, delta);
@@ -551,10 +556,14 @@ export const animator = {
         // Update individual Object Animations
         animationMixers.forEach(mixer => mixer.update(delta));
 
-        // Render main scene
-        viewerState.renderer.render(viewerState.scene, viewerState.camera);
+        // Render main scene (Three.js XR handles VR rendering automatically)
+        if (!viewerState.renderer.xr.isPresenting) {
+            viewerState.renderer.render(viewerState.scene, viewerState.camera);
+        }
 
-        // Render mini-map
-        viewerState.miniMapRenderer.render(viewerState.scene, viewerState.miniMapCamera);
+        // Render mini-map (skip in XR mode to avoid framebuffer conflicts)
+        if (!viewerState.renderer.xr.isPresenting) {
+            viewerState.miniMapRenderer.render(viewerState.scene, viewerState.miniMapCamera);
+        }
     }
 }

@@ -39,30 +39,22 @@ export const viewerState = {
         const gravity = new RAPIER.Vector3(0.0, -9.82, 0.0);
         this.world = new RAPIER.World(gravity);
 
-        // Check WebGPU support
-        const isWebGPUSupported = !!navigator.gpu;
-
-        // Create renderer with fallback
+        // Create renderer (WebGL only for VR compatibility testing)
         function createRenderer(canvas) {
-            if (isWebGPUSupported) {
-                try {
-                    const renderer = new WebGPURenderer({ canvas, antialias: true });
-                    console.log('Using WebGPURenderer');
-                    return renderer;
-                } catch (error) {
-                    console.warn('WebGPURenderer failed to initialize:', error);
-                }
-            }
-            const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
-            console.log('Using WebGLRenderer');
-            return renderer;
+            console.log('Using WebGLRenderer (WebGPU disabled for VR testing)');
+            return new THREE.WebGLRenderer({ canvas, antialias: true });
         }
 
-        // Initialize the WebGPU / WebGL renderer
+        // Initialize the WebGL renderer (WebGL required for VR compatibility)
         this.renderer = createRenderer(canvas);
         if (this.renderer.init) await this.renderer.init();
         this.renderer.setSize(window.innerWidth, window.innerHeight);
         this.renderer.outputColorSpace = THREE.SRGBColorSpace;
+
+        // Configure XR for VR support
+        this.renderer.xr.enabled = true;
+        // Set XR reference space type for SteamVR compatibility
+        this.renderer.xr.setReferenceSpaceType('local-floor');
 
         // Create scene and camera
         this.scene = new THREE.Scene();

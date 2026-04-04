@@ -1,4 +1,6 @@
 // Import necessary components
+import * as THREE from 'three';
+import { PointerLockControls } from 'three/examples/jsm/controls/PointerLockControls.js';
 import { Principal } from '@icp-sdk/core/principal';
 import { viewerState, sceneObjects, worldController, animationMixers, khetState } from './index.js';
 import { khetController, clearAllKhets, getUserNodeActor, updateKhetTable, changekhetEditorDrawer } from './khet.js';
@@ -749,6 +751,116 @@ document.addEventListener('DOMContentLoaded', async () => {
     toggleMap.addEventListener('change', () => {
         mapArea.style.display = toggleMap.checked ? 'block' : 'none';
     });
+
+    // **VR Button**
+    const vrBtn = document.getElementById('vr-btn');
+
+    // Check WebXR support and enable/disable VR button
+    if (navigator.xr) {
+        navigator.xr.isSessionSupported('immersive-vr').then(supported => {
+            vrBtn.disabled = !supported;
+            if (!supported) {
+                vrBtn.textContent = 'VR Not Available';
+            }
+        });
+    } else {
+        vrBtn.disabled = true;
+        vrBtn.textContent = 'VR Not Supported';
+    }
+
+    vrBtn.addEventListener('click', async () => {
+        if (!vrBtn.disabled) {
+            vrBtn.disabled = true;
+            vrBtn.textContent = 'Starting VR...';
+            await enterVR();
+            // Re-enable button if VR failed to start
+            setTimeout(() => {
+                if (vrBtn.textContent.includes('Starting')) {
+                    vrBtn.disabled = false;
+                    vrBtn.textContent = 'Enter VR';
+                }
+            }, 3000);
+        }
+    });
+
+    // **VR Functionality**
+    async function enterVR() {
+        // Check if WebXR is supported
+        if (!navigator.xr) {
+            alert('WebXR is not supported on this device/browser');
+            return;
+        }
+
+        // Check if VR is available
+        const isVRAvailable = await navigator.xr.isSessionSupported('immersive-vr');
+        if (!isVRAvailable) {
+            alert('VR is not available on this device');
+            return;
+        }
+
+        // Enable XR on the renderer
+        viewerState.renderer.xr.enabled = true;
+
+        // Start VR session with proper Three.js WebXR handling
+        try {
+            // Configure session with required features for SteamVR compatibility
+            const sessionInit = {
+                requiredFeatures: ['local-floor', 'bounded-floor'],
+                optionalFeatures: ['local', 'viewer']
+            };
+
+            console.log('Requesting immersive-vr session with features:', sessionInit);
+
+            // Request session and let Three.js handle reference space internally
+            const session = await navigator.xr.requestSession('immersive-vr', sessionInit);
+            console.log('VR session created successfully');
+
+            // Set the session on the renderer (Three.js handles reference space setup)
+            await viewerState.renderer.xr.setSession(session);
+            console.log('XR session set on renderer successfully');
+
+            // Unlock pointer controls when entering VR
+            if (viewerState.controls && viewerState.controls.isLocked) {
+                viewerState.controls.unlock();
+            }
+
+            // Hide the game menu
+            const gameMenu = document.getElementById('game-menu');
+            if (gameMenu) {
+                gameMenu.style.display = 'none';
+            }
+
+            // Handle VR session end
+            session.addEventListener('end', () => {
+                console.log('VR session ended');
+                // Reset renderer state
+                if (viewerState.renderer) {
+                    viewerState.renderer.xr.enabled = false;
+                }
+                // Show menu again when exiting VR
+                if (gameMenu) {
+                    gameMenu.style.display = 'block';
+                }
+            });
+
+            console.log('VR session started successfully - SteamVR should now be active');
+        } catch (error) {
+            console.error('Failed to start VR session:', error);
+            console.error('Error name:', error.name);
+            console.error('Error message:', error.message);
+
+            let errorMessage = 'Failed to start VR session: ';
+            if (error.name === 'NotSupportedError') {
+                errorMessage += 'Reference space not supported. Try different VR features.';
+            } else if (error.name === 'InvalidStateError') {
+                errorMessage += 'Invalid XR state. Please refresh the page.';
+            } else {
+                errorMessage += error.message;
+            }
+
+            alert(errorMessage);
+        }
+    }
 
     // Initialize authentication and get identity
     await initAuth();
