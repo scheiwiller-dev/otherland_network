@@ -262,18 +262,18 @@ export const nodeSettings = {
         document.getElementById("enter-friends-treehouse").style.display = "none";
 
         switch (this.nodeType) {
-        case 0:
+        case 0: // My TreeHouse
             await updateKhetTable();
             break;
-        case 1:
+        case 1: // Friend's TreeHouse
             document.getElementById("enter-friends-treehouse").style.display = "block";
             break;
-        case 2:
+        case 2: // Own Otherland Node
             await updateKhetTable();
             document.getElementById("edit-node-btn").style.display = "block";
             document.getElementById("node-settings-btn").style.display = "block";
             break;
-        case 3:
+        case 3: // Otherland Node
             break;
         case 4:
             break;

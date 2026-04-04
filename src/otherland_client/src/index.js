@@ -1,3 +1,7 @@
+// Initially hide all menu screens
+document.getElementById('main-menu').style.display = 'none';
+document.getElementById('username-screen').style.display = 'none';
+
 // Import External Dependencies
 import * as THREE from 'three';
 import { PointerLockControls } from 'three/examples/jsm/controls/PointerLockControls.js';

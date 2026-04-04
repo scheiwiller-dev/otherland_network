@@ -142,7 +142,7 @@ export const online = {
             if (nodeSettings.nodeType === 0) {
                 this.isHosting = true;
                 this.isJoined = false;
-            } else if (nodeSettings.nodeType === 2) {
+            } else if (nodeSettings.nodeType === 1) {
                 this.isHosting = false;
                 this.isJoined = true;
             } else {

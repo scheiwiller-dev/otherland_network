@@ -314,6 +314,14 @@ canvas {
           display: none;
         }
       }
+      
+      #quickconnect-buttons {
+        display: flex;
+        
+        #enter-friends-treehouse {
+          display: none;
+        }
+      }
     }
 
     #quick-connect-invitation {

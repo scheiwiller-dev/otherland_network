@@ -85,7 +85,6 @@ function enterViewer() {
 
 // Leave 3D World
 function leaveViewer() {
-    userIsInWorld = false;
     const gameMenu = document.getElementById('game-menu');
     gameMenu.style.display = 'flex'; // Show the game menu when pointer lock is released
     keys.clear();                    // Clear any active key presses
@@ -751,11 +750,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         mapArea.style.display = toggleMap.checked ? 'block' : 'none';
     });
 
-    // Initially, show the start screen
-    startScreen.style.display = 'flex';
-    mainMenu.style.display = 'none';
-    usernameScreen.style.display = 'none';
-
     // Initialize authentication and get identity
     await initAuth();
     const identity = getIdentity();
@@ -792,6 +786,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         mainMenu.style.display = 'block';
 
         updateAccountSwitcher(true);   // true = guest mode
+        showTab("otherland-tab");
     });
 
     // Upload WASM module

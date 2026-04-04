@@ -193,7 +193,7 @@ export function updateAccountSwitcher(isGuest = false) {
         container.appendChild(status);
 
         const loginBtn = document.createElement('button');
-        loginBtn.textContent = 'Login with Internet Identity';
+        loginBtn.textContent = 'Login with\nInternet Identity';
         loginBtn.style.marginTop = '8px';
         loginBtn.addEventListener('click', async () => {
             const { login } = await import('./user.js');
