@@ -819,6 +819,12 @@ document.addEventListener('DOMContentLoaded', async () => {
             await viewerState.renderer.xr.setSession(session);
             console.log('XR session set on renderer successfully');
 
+            // NOTE: Animation loop is managed by renderer.setAnimationLoop (set in animator.start())
+            // No need to stop animator or set xr-specific loop - this prevents conflicts
+            // and ensures renderFrame() is called in the XR frame callback, fixing the
+            // "XRSession has completed multiple animation frames without drawing anything
+            // to the baseLayer's framebuffer" warning.
+
             // Unlock pointer controls when entering VR
             if (viewerState.controls && viewerState.controls.isLocked) {
                 viewerState.controls.unlock();
@@ -833,14 +839,15 @@ document.addEventListener('DOMContentLoaded', async () => {
             // Handle VR session end
             session.addEventListener('end', () => {
                 console.log('VR session ended');
-                // Reset renderer state
-                if (viewerState.renderer) {
+                // Reset renderer XR state
+                if (viewerState.renderer && viewerState.renderer.xr) {
                     viewerState.renderer.xr.enabled = false;
                 }
                 // Show menu again when exiting VR
                 if (gameMenu) {
                     gameMenu.style.display = 'block';
                 }
+                // Animation loop continues via renderer.setAnimationLoop
             });
 
             console.log('VR session started successfully - SteamVR should now be active');

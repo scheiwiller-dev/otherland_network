@@ -193,7 +193,7 @@ export const animator = {
     positionInterval: null,
     queryInterval: null,
 
-    // Start animation Loop
+    // Start animation Loop - uses renderer.setAnimationLoop for XR compatibility
     start() {
         if (!RAPIER) {
             console.error('RAPIER not fully initialized. Delaying animation start.');
@@ -219,11 +219,16 @@ export const animator = {
                 }
             }, 5000);
 
-            this.animate();
+            // Prefer renderer.setAnimationLoop for both normal and XR modes (fixes framebuffer warning)
+            if (viewerState.renderer && viewerState.renderer.setAnimationLoop) {
+                viewerState.renderer.setAnimationLoop(() => animator.renderFrame());
+            } else {
+                this.animate();
+            }
         }
     },
 
-    // Stop animation Loop
+    // Stop animation Loop (clears intervals only; loop managed by renderer for XR)
     stop() {
         this.isAnimating = false;
         if (this.positionInterval) {
@@ -234,19 +239,28 @@ export const animator = {
             clearInterval(this.queryInterval);
             this.queryInterval = null;
         }
+        // Do NOT null the animation loop here - renderer.setAnimationLoop must stay active
+        // for XR framebuffer compliance. isAnimating flag controls logic instead.
     },
 
-    // Animation Loop
+    // Fallback Animation Loop (for non-Three.js renderer cases)
     animate() {
         if (!animator.isAnimating) return;
-
-        // Use regular animation loop - Three.js XR handles VR rendering automatically
-        // when renderer.xr.setSession() is called
         requestAnimationFrame(animator.animate);
         animator.renderFrame();
     },
 
     renderFrame() {
+        // Always render even if not animating (prevents XR framebuffer warning)
+        // Only skip physics/Khet/movement updates when stopped (e.g. during loading)
+        if (!animator.isAnimating) {
+            // Minimal render to keep XR session alive
+            if (viewerState.renderer) {
+                viewerState.renderer.render(viewerState.scene, viewerState.camera);
+            }
+            return;
+        }
+
         timer.update();
         const delta = timer.getDelta();
         viewerState.world.step(viewerState.eventQueue, delta);
@@ -556,10 +570,9 @@ export const animator = {
         // Update individual Object Animations
         animationMixers.forEach(mixer => mixer.update(delta));
 
-        // Render main scene (Three.js XR handles VR rendering automatically)
-        if (!viewerState.renderer.xr.isPresenting) {
-            viewerState.renderer.render(viewerState.scene, viewerState.camera);
-        }
+        // Render main scene - ALWAYS render, even in XR mode
+        // Three.js XR manager intercepts this call and renders to XR framebuffer
+        viewerState.renderer.render(viewerState.scene, viewerState.camera);
 
         // Render mini-map (skip in XR mode to avoid framebuffer conflicts)
         if (!viewerState.renderer.xr.isPresenting) {
