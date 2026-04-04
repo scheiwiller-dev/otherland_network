@@ -279,7 +279,7 @@ export const online = {
                     if (this.isHosting) {
                         console.log("Khetlist Request received, sending khets");
                         const preparedKhets = {};
-                        for (const [khetId, khet] of Object.entries(khetController.khets)) {
+                        for (const [khetId, khet] of Object.entries(nodeSettings.localKhets)) {
                             const { gltfData, ...metadata } = khet;
                             preparedKhets[khetId] = prepareForSending(metadata);
                         }
@@ -309,7 +309,17 @@ export const online = {
                 case "request-gltfdata":
                     if (this.isHosting) {
                         const khetId = data.value;
-                        const khet = khetController.getKhet(khetId);
+                        const khet = nodeSettings.getLocalKhet(khetId);
+
+                        // Get 3D data from cache
+                        const cachedKhet = await getFromCache(khetId);
+                        if (cachedKhet && cachedKhet.gltfData) {
+                            khet.gltfData = cachedKhet.gltfData;
+                        } else {
+                            console.warn(`Khet ${khetId} in localKhets missing gltfData in cache`);
+                        }
+
+                        // Send 3D data in chunks if available
                         if (khet && khet.gltfData) {
                             const conn = this.connectedPeers.get(peerId);
                             if (conn) {
@@ -389,7 +399,7 @@ export const online = {
                 case "request-missing-chunks":
                     if (this.isHosting) {
                         const { khetId, missingChunks } = data.value;
-                        const khet = khetController.getKhet(khetId);
+                        const khet = nodeSettings.getLocalKhet(khetId);
                         if (khet && khet.gltfData) {
                             const conn = this.connectedPeers.get(peerId);
                             if (conn) {

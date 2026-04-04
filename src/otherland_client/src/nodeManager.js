@@ -238,6 +238,11 @@ export const nodeSettings = {
     saveLocalKhets() {
         localStorage.setItem('localKhets', JSON.stringify(this.localKhets));
     },
+    
+    // Get a specific Khet by ID
+    getLocalKhet(khetId) {
+        return this.localKhets[khetId] || null;
+    },
 
     userOwnedNodes: [],
     availableNodes: null,

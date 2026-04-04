@@ -540,7 +540,7 @@ export const animator = {
         animationMixers.forEach(mixer => mixer.update(delta));
 
         // Render main scene
-        viewerState.renderer.renderAsync(viewerState.scene, viewerState.camera);
+        viewerState.renderer.render(viewerState.scene, viewerState.camera);
 
         // Render mini-map
         viewerState.miniMapRenderer.render(viewerState.scene, viewerState.miniMapCamera);

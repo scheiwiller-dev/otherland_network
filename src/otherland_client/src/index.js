@@ -60,6 +60,7 @@ export const viewerState = {
 
         // Initialize the WebGPU / WebGL renderer
         this.renderer = createRenderer(canvas);
+        if (this.renderer.init) await this.renderer.init();
         this.renderer.setSize(window.innerWidth, window.innerHeight);
         this.renderer.outputColorSpace = THREE.SRGBColorSpace;
 
