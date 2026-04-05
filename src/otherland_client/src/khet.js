@@ -725,8 +725,15 @@ export async function loadKhet(khetId, { sceneObjects, animationMixers, khetStat
                     // Scale Object
                     object.scale.set(khet.scale[0], khet.scale[1], khet.scale[2]);
 
-                    // Add Object to Scene
-                    viewerState.scene.add(object);
+                    // Add to playerRig if avatar (for locomotion), else scene
+                    const isAvatarKhet = khet.khetType === 'Avatar';
+                    if (isAvatarKhet && viewerState.playerRig) {
+                        viewerState.playerRig.add(object);
+                        object.position.set(0, 0, 0); // Local position relative to rig; physics will drive rig
+                        console.log(`Avatar ${khetId} added to playerRig`);
+                    } else {
+                        viewerState.scene.add(object);
+                    }
                     sceneObjects.push(object);
 
                     // Compute bounding box and adjust origin
@@ -735,12 +742,20 @@ export async function loadKhet(khetId, { sceneObjects, animationMixers, khetStat
                     const center = box.getCenter(new THREE.Vector3());
                     const minY = box.min.y; // Lowest point on Y-axis
 
-                    // Adjust object position so bottom is at khet.position[1]
-                    object.position.set(
-                        khet.position[0] - center.x, // Center X
-                        khet.position[1] - minY,     // Bottom at khet.position[1]
-                        khet.position[2] - center.z  // Center Z
-                    );
+                    // Adjust object/rig position so bottom is at khet.position[1]
+                    if (isAvatarKhet && viewerState.playerRig) {
+                        viewerState.playerRig.position.set(
+                            khet.position[0], 
+                            khet.position[1], 
+                            khet.position[2]
+                        );
+                    } else {
+                        object.position.set(
+                            khet.position[0] - center.x, // Center X
+                            khet.position[1] - minY,     // Bottom at khet.position[1]
+                            khet.position[2] - center.z  // Center Z
+                        );
+                    }
 
                     // Determine mass and material based on khetType
                     let mass = 0;
@@ -770,19 +785,8 @@ export async function loadKhet(khetId, { sceneObjects, animationMixers, khetStat
                         console.log(`Avatar collider handle set to: ${collider.handle}, type: ${typeof collider.handle}, raw: ${collider.handle.toString()}`);
                         rigidBody.lockRotations(true, true);
 
-                        // Position the mesh relative to the body's center
-                        object.position.set(
-                            rigidBody.translation().x,
-                            rigidBody.translation().y - radius, // Adjust visual mesh position
-                            rigidBody.translation().z
-                        );
+                        // Position is now driven by rig sync in animation.js (mesh local = 0 relative to rig)
                         object.rotation.y = Math.PI; // Keep initial rotation if needed
-
-                        // VR Camera in Avatar
-                        if (isAvatar && viewerState.renderer.xr.isPresenting) {
-                            object.add(viewerState.renderer.xr.getCamera());
-                            //camera.position.set(0, radius, 0); // Position camera at the center of the avatar
-                        }
 
                         if (debugPhysics) {
                             const geometry = new THREE.SphereGeometry(radius, 16, 16);

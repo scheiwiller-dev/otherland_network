@@ -155,10 +155,10 @@ const PLAYER_QUERY_INTERVAL = 5000; // 5 seconds
 
 // Send position to canister every 1s
 async function sendPositionUpdate() {
-    if (nodeSettings.nodeType === 2 && avatarState.avatarMesh) { // Adjust conditions as needed
+    if (nodeSettings.nodeType === 2 && (avatarState.avatarMesh || viewerState.playerRig)) { // Adjust conditions as needed
         try {
             const actor = await getUserNodeActor();
-            const pos = avatarState.avatarMesh.position;
+            const pos = viewerState.playerRig ? viewerState.playerRig.position : avatarState.avatarMesh.position;
             await actor.updatePosition([pos.x, pos.y, pos.z]);
         } catch (error) {
             console.error("Failed to update position:", error);
@@ -263,7 +263,8 @@ export const animator = {
         khetState.executors.forEach(executor => executor());
 
         // Own Interaction with World
-        if (viewerState.controls.isLocked || isTouchDevice) {
+        const isVR = !!(viewerState.renderer && viewerState.renderer.xr && viewerState.renderer.xr.isPresenting);
+        if (viewerState.controls.isLocked || isTouchDevice || isVR) {
             if (avatarState.avatarMesh && avatarState.avatarBody) {
                 
                 const collider = avatarState.avatarBody.collider(0);
@@ -397,12 +398,32 @@ export const animator = {
                     }
                 }
 
-                // Update camera to follow avatar
-                viewerState.cameraController.update();
+                // Update camera to follow avatar (skip in VR as XR controls camera)
+                if (!isVR) {
+                    viewerState.cameraController.update();
+                }
 
-                // Sync mesh with body and keep upright
+                // Sync mesh/rig with body and keep upright
                 const pos = avatarState.avatarBody.translation();
-                avatarState.avatarMesh.position.set(pos.x, pos.y, pos.z);
+                if (viewerState.playerRig) {
+                    // Move the rig (parents avatar mesh) to body position; keep mesh local at origin
+                    viewerState.playerRig.position.set(pos.x, pos.y, pos.z);
+                    if (avatarState.avatarMesh.parent === viewerState.playerRig) {
+                        avatarState.avatarMesh.position.set(0, 0, 0);
+                    }
+                } else {
+                    avatarState.avatarMesh.position.set(pos.x, pos.y, pos.z);
+                }
+
+                // In VR, sync rig to XR camera world position (x/z) so physical head movement + WASD locomotion both affect avatar/camera
+                if (isVR && viewerState.playerRig) {
+                    const xrCamera = viewerState.renderer.xr.getCamera();
+                    const camWorldPos = new THREE.Vector3();
+                    xrCamera.getWorldPosition(camWorldPos);
+                    viewerState.playerRig.position.x = camWorldPos.x;
+                    viewerState.playerRig.position.z = camWorldPos.z;
+                    // y remains from physics/grounding
+                }
 
                 // Rotate the avatar's quaternion to match the camera direction
                 const targetQuaternion = new THREE.Quaternion().setFromUnitVectors(
@@ -422,7 +443,7 @@ export const animator = {
 
                 // Update mini-map camera and player indicator
                 if (avatarState.avatarMesh) {
-                    const playerPos = avatarState.avatarMesh.position;
+                    const playerPos = viewerState.playerRig ? viewerState.playerRig.position : avatarState.avatarMesh.position;
                     if (avatarState.isGrounded) {
                         avatarState.lastGroundedY = playerPos.y;
                     }
@@ -449,7 +470,8 @@ export const animator = {
                                 point.position[0], point.position[1], point.position[2]
                             ).applyMatrix4(obj.matrixWorld);
 
-                            const distance = avatarState.avatarMesh.position.distanceTo(pointWorldPosition);
+                            const avatarPos = viewerState.playerRig ? viewerState.playerRig.position : avatarState.avatarMesh.position;
+                            const distance = avatarPos.distanceTo(pointWorldPosition);
                             if (distance < 1.0 && distance < minDistance) {
                                 if (point.action == "pickupObject" && avatarState.hasObjectPickedUp) {
                                     console.log("Can't pick up more than 1 Objects");
@@ -483,9 +505,10 @@ export const animator = {
                 if (avatarState.hasObjectPickedUp && preApprovedFunctions.pickedUpObject) {
 
                     const object = preApprovedFunctions.pickedUpObject;
+                    const avatarPos = viewerState.playerRig ? viewerState.playerRig.position : avatarState.avatarMesh.position;
                     const offset = new THREE.Vector3(0, 1, 1);
                     offset.applyQuaternion(avatarState.avatarMesh.quaternion);
-                    object.position.copy(avatarState.avatarMesh.position).add(offset);
+                    object.position.copy(avatarPos).add(offset);
                     object.quaternion.copy(avatarState.avatarMesh.quaternion);
                 }
 
@@ -493,7 +516,7 @@ export const animator = {
 
                 // Send avatar position to other players
                 if (online.connectedPeers.size > 0 && currentTime - online.lastSendTime > 50) {
-                    const position = avatarState.avatarMesh.position;
+                    const position = viewerState.playerRig ? viewerState.playerRig.position : avatarState.avatarMesh.position;
                     const quaternion = avatarState.avatarMesh.quaternion;
 
                     online.send("position", {
@@ -538,9 +561,10 @@ export const animator = {
                 if (obj.userData.isPickedUp) {
                     
                 // Calculate the offset in world space based on avatar's position and orientation
+                const avatarPos = viewerState.playerRig ? viewerState.playerRig.position : avatarState.avatarMesh.position;
                 const offset = new THREE.Vector3(0, 1, 1); // y=1 (above), z=-0.3 (in front)
                 offset.applyQuaternion(avatarState.avatarMesh.quaternion); // Align with avatar's rotation
-                obj.position.copy(avatarState.avatarMesh.position).add(offset); // Set position in world space
+                obj.position.copy(avatarPos).add(offset); // Set position in world space
 
                 // Sync mesh with body
                 const pos = obj.userData.body.translation();

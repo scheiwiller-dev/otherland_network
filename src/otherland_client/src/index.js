@@ -29,6 +29,7 @@ export const viewerState = {
     miniMapCamera: null,      // Add mini-map camera
     miniMapRenderer: null,    // Add mini-map renderer
     playerIndicator: null,    // Add player indicator
+    playerRig: null,          // Player rig (dolly) for avatar + VR locomotion (camera parented here in VR)
 
     // Initialize Physics World
     async init () {
@@ -57,6 +58,39 @@ export const viewerState = {
         // Create scene and camera
         this.scene = new THREE.Scene();
         this.scene.background = new THREE.Color(0x87ceeb);
+
+        // Player rig (dolly) that represents the avatar's world position (feet/base). Camera will be parented to it in VR for locomotion.
+        this.playerRig = new THREE.Group();
+        this.playerRig.name = 'playerRig';
+        this.scene.add(this.playerRig);
+
+        // Setup VR camera attachment to playerRig (standard Three.js WebXR locomotion pattern)
+        this.renderer.xr.addEventListener('sessionstart', () => {
+            const xrCamera = this.renderer.xr.getCamera();
+            
+            // Clear previous parent if any
+            if (xrCamera.parent) {
+                xrCamera.parent.remove(xrCamera);
+            }
+            
+            // Parent XR camera directly to playerRig (XR updates local transform for head tracking; rig moves base position)
+            this.playerRig.add(xrCamera);
+            
+            // Eye height offset (local to rig; adjust to match avatar height)
+            xrCamera.position.y = 1.6;
+            
+            console.log('VR session started - XR camera attached to playerRig');
+            
+            // Unlock pointer controls when entering VR
+            if (this.controls && this.controls.isLocked) {
+                this.controls.unlock();
+            }
+        });
+
+        this.renderer.xr.addEventListener('sessionend', () => {
+            console.log('VR session ended');
+            // Camera will be managed by Three.js on exit
+        });
 
         // Set up a perspective camera with a 75-degree FOV
         this.camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
