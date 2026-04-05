@@ -22,8 +22,6 @@ export const isTouchDevice = 'ontouchstart' in window;
 const BASE_SPEED = 4.0;
 const AIR_ACCELERATION = 15.0; // m/s², controls how quickly the avatar adjusts direction in air
 const JUMP_FORCE = 7.0;
-const GROUND_RAY_LENGTH = 0.3; // How far below the avatar's origin to check for ground
-const GROUND_RAY_TOLERANCE = 0.1; // Extra tolerance distance
 
 // Variables for camera rotation and movement
 let yaw = 0;
@@ -219,7 +217,7 @@ export const animator = {
                 }
             }, 5000);
 
-            // Prefer renderer.setAnimationLoop for both normal and XR modes (fixes framebuffer warning)
+            // Prefer renderer.setAnimationLoop for both normal and XR modes
             if (viewerState.renderer && viewerState.renderer.setAnimationLoop) {
                 viewerState.renderer.setAnimationLoop(() => animator.renderFrame());
             } else {
@@ -228,7 +226,7 @@ export const animator = {
         }
     },
 
-    // Stop animation Loop (clears intervals only; loop managed by renderer for XR)
+    // Stop animation Loop
     stop() {
         this.isAnimating = false;
         if (this.positionInterval) {
@@ -239,11 +237,9 @@ export const animator = {
             clearInterval(this.queryInterval);
             this.queryInterval = null;
         }
-        // Do NOT null the animation loop here - renderer.setAnimationLoop must stay active
-        // for XR framebuffer compliance. isAnimating flag controls logic instead.
     },
 
-    // Fallback Animation Loop (for non-Three.js renderer cases)
+    // Fallback Animation Loop
     animate() {
         if (!animator.isAnimating) return;
         requestAnimationFrame(animator.animate);
@@ -251,10 +247,8 @@ export const animator = {
     },
 
     renderFrame() {
-        // Always render even if not animating (prevents XR framebuffer warning)
-        // Only skip physics/Khet/movement updates when stopped (e.g. during loading)
+        // Always render even if not animating 
         if (!animator.isAnimating) {
-            // Minimal render to keep XR session alive
             if (viewerState.renderer) {
                 viewerState.renderer.render(viewerState.scene, viewerState.camera);
             }
@@ -570,8 +564,7 @@ export const animator = {
         // Update individual Object Animations
         animationMixers.forEach(mixer => mixer.update(delta));
 
-        // Render main scene - ALWAYS render, even in XR mode
-        // Three.js XR manager intercepts this call and renders to XR framebuffer
+        // Render main scene
         viewerState.renderer.render(viewerState.scene, viewerState.camera);
 
         // Render mini-map (skip in XR mode to avoid framebuffer conflicts)

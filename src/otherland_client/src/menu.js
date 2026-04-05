@@ -16,7 +16,6 @@ import { loadLibraryObjects, deleteLibraryObject, generateObjectId, readFileAsDa
 // Declare Variables
 const startScreen = document.getElementById('start-screen');
 const mainMenu = document.getElementById('main-menu');
-const accountSwitcher = document.getElementById('account-switcher');
 const connectIIBtn = document.getElementById('connect-ii-btn');
 const continueGuestBtn = document.getElementById('continue-guest-btn');
 const tabs = document.querySelectorAll('.tab');
@@ -507,7 +506,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
     });
 
-    // **Clear Khets Button**
     // Clear all Khets from the backend and storage canisters
     const clearBtn = document.getElementById('clear-khets-btn');
     clearBtn.addEventListener('click', async () => {
@@ -679,7 +677,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         nodeSettingsBtn.click();
     }
 
-    // **Home Button**
     // Return to the start overlay and unlock controls
     const homeBtn = document.getElementById('home-btn');
     homeBtn.addEventListener('click', () => {
@@ -714,7 +711,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     const backSettingsBtn = document.getElementById('back-settings-btn');
     backSettingsBtn.addEventListener('click', () => showPage(mainPage)); // Return to main menu
 
-    // **Close Button**
     // Resume the game by hiding the game menu and locking controls
     const closeBtn = document.getElementById('close-btn');
     closeBtn.addEventListener('click', () => {
@@ -798,9 +794,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             return;
         }
 
-        // Enable XR on the renderer
-        viewerState.renderer.xr.enabled = true;
-
         // Start VR session with proper Three.js WebXR handling
         try {
             // Configure session with required features for SteamVR compatibility
@@ -819,12 +812,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             await viewerState.renderer.xr.setSession(session);
             console.log('XR session set on renderer successfully');
 
-            // NOTE: Animation loop is managed by renderer.setAnimationLoop (set in animator.start())
-            // No need to stop animator or set xr-specific loop - this prevents conflicts
-            // and ensures renderFrame() is called in the XR frame callback, fixing the
-            // "XRSession has completed multiple animation frames without drawing anything
-            // to the baseLayer's framebuffer" warning.
-
             // Unlock pointer controls when entering VR
             if (viewerState.controls && viewerState.controls.isLocked) {
                 viewerState.controls.unlock();
@@ -839,6 +826,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             // Handle VR session end
             session.addEventListener('end', () => {
                 console.log('VR session ended');
+
                 // Reset renderer XR state
                 if (viewerState.renderer && viewerState.renderer.xr) {
                     viewerState.renderer.xr.enabled = false;
@@ -847,7 +835,6 @@ document.addEventListener('DOMContentLoaded', async () => {
                 if (gameMenu) {
                     gameMenu.style.display = 'block';
                 }
-                // Animation loop continues via renderer.setAnimationLoop
             });
 
             console.log('VR session started successfully - SteamVR should now be active');

@@ -11,7 +11,6 @@ import RAPIER, { init } from '@dimforge/rapier3d-compat';
 // Import Internal Modules
 import { khetController, loadKhet } from './khet.js';
 import { avatarState } from './avatar.js';
-import { animator } from './animation.js';
 import { online } from './peermesh.js';
 import { nodeSettings } from './nodeManager.js';
 import { logout } from './user.js';
@@ -53,7 +52,6 @@ export const viewerState = {
 
         // Configure XR for VR support
         this.renderer.xr.enabled = true;
-        // Set XR reference space type for SteamVR compatibility
         this.renderer.xr.setReferenceSpaceType('local-floor');
 
         // Create scene and camera
