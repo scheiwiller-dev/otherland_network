@@ -778,6 +778,12 @@ export async function loadKhet(khetId, { sceneObjects, animationMixers, khetStat
                         );
                         object.rotation.y = Math.PI; // Keep initial rotation if needed
 
+                        // VR Camera in Avatar
+                        if (isAvatar && viewerState.renderer.xr.isPresenting) {
+                            object.add(viewerState.renderer.xr.getCamera());
+                            //camera.position.set(0, radius, 0); // Position camera at the center of the avatar
+                        }
+
                         if (debugPhysics) {
                             const geometry = new THREE.SphereGeometry(radius, 16, 16);
                             const material = new THREE.MeshBasicMaterial({ color: 0xff0000, wireframe: true });

@@ -563,6 +563,12 @@ export const animator = {
 
         // Update individual Object Animations
         animationMixers.forEach(mixer => mixer.update(delta));
+        
+        // Hide player indicator (red sphere) in VR to fix left-eye only artifact
+        if (viewerState.playerIndicator) {
+            const isVR = viewerState.renderer && viewerState.renderer.xr && viewerState.renderer.xr.isPresenting;
+            viewerState.playerIndicator.visible = !isVR;
+        }
 
         // Render main scene
         viewerState.renderer.render(viewerState.scene, viewerState.camera);
