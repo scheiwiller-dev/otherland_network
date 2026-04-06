@@ -879,10 +879,8 @@ export async function loadKhet(khetId, { sceneObjects, animationMixers, khetStat
                     }
 
                     // Common physics properties
-                    //rigidBody.setLinearDamping(0.9);
-                    //rigidBody.setAngularDamping(0.9);
-                    //object.userData = { rigidBody, debugMesh };
                     object.userData.body = rigidBody;
+                    object.userData.isAvatar = isAvatar;
                     object.userData.khetType = khet.khetType;
                     console.log(`Khet ${khetId} initial position:`, object.position, 'Body position:', rigidBody.translation());
 
