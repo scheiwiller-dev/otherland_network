@@ -283,6 +283,7 @@ export const khetState = {
 // World Controller
 export const worldController = {
     loadedKhets: new Map(), // khetId => { mesh, body, isAvatar }
+    fallbackGround: null, // { mesh, body } for the fallback ground plane when no scene objects
 
     // Sync local world with Node objects
     async syncWithNode(params) {
@@ -369,6 +370,30 @@ export const worldController = {
         }
         this.loadedKhets.clear();
         avatarState.setSelectedAvatarId(null);
+        this.unloadFallbackGround(scene, world);
+    },
+
+    // Unload fallback ground if present (to prevent it persisting when loading scenes with khets)
+    unloadFallbackGround(scene = viewerState.scene, world = viewerState.world) {
+        if (this.fallbackGround) {
+            const { mesh, body } = this.fallbackGround;
+            if (mesh) {
+                scene.remove(mesh);
+                if (mesh.userData) {
+                    mesh.userData.body = null; // Clear reference
+                }
+            }
+            if (body) {
+                world.removeRigidBody(body);
+            }
+            // Remove from sceneObjects array if present
+            const index = sceneObjects.indexOf(mesh);
+            if (index !== -1) {
+                sceneObjects.splice(index, 1);
+            }
+            this.fallbackGround = null;
+            console.log('Unloaded fallback ground plane');
+        }
     },
 
     // Initialize the scene
@@ -378,6 +403,9 @@ export const worldController = {
         params.sceneObjects.length = 0;
         params.animationMixers.length = 0;
         params.khetState.executors.length = 0;
+        
+        // Unload any existing fallback ground in case we're now loading khets with scene objects
+        this.unloadFallbackGround(params.scene, params.world);
         
         // Load correct khets for the current node
         await worldController.syncWithNode(params);
@@ -459,6 +487,7 @@ export const worldController = {
         groundPlane.userData = { body: groundBody };
         viewerState.scene.add(groundPlane);
         sceneObjects.push(groundPlane);
+        this.fallbackGround = { mesh: groundPlane, body: groundBody };
         console.log('Loaded fallback ground plane');
     }
 }

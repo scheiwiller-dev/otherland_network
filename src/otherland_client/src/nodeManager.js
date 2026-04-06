@@ -1,5 +1,6 @@
 import { Actor, HttpAgent } from '@icp-sdk/core/agent';
-import { idlFactory as cardinalIdlFactory } from '../../declarations/cardinal'; // Adjust path based on your project structure
+import { idlFactory as cardinalIdlFactory } from '../../declarations/cardinal';
+import { idlFactory as userNodeIdlFactory } from '../../declarations/user_node';
 import { user, authReady, getIdentity, logout } from './user.js';
 import { khetController, updateKhetTable } from './khet.js';
 import { online } from './peermesh.js'
