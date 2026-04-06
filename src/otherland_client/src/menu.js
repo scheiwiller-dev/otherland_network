@@ -9,7 +9,8 @@ import { initAuth, getIdentity, login, user, updateAccountSwitcher, updateProfil
 import { chat, initChat } from './chat.js';
 import { online } from './peermesh.js'
 import { avatarState, populateAvatarButtons } from './avatar.js'
-import { animator, isTouchDevice } from './animation.js'
+import { animator } from './animation.js'
+import { isTouchDevice } from './movement.js';
 import { updateFriendsList, handleInvitation } from './friends.js'
 import { loadLibraryObjects, deleteLibraryObject, generateObjectId, readFileAsDataURL } from './library.js'
 
@@ -330,7 +331,6 @@ async function enterWorld() {
     await worldController.loadScene(params, nodeSettings);
 
     document.getElementById('main-menu').style.display = 'none';
-    const isTouchDevice = 'ontouchstart' in window;
     if (!isTouchDevice) {
         viewerState.controls.lock();      // Lock the pointer for game control
     } else {   
@@ -716,7 +716,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     closeBtn.addEventListener('click', () => {
         const gameMenu = document.getElementById('game-menu');
         gameMenu.style.display = 'none'; // Hide the game menu
-        const isTouchDevice = 'ontouchstart' in window;
         if (!isTouchDevice) {
             viewerState.controls.lock();      // Lock the pointer for game control
         } else {   

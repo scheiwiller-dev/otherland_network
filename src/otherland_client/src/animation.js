@@ -17,8 +17,6 @@ const POSITION_UPDATE_INTERVAL = 1000; // 1 second
 let lastPlayerQuery = 0;
 const PLAYER_QUERY_INTERVAL = 5000; // 5 seconds
 
-const isTouchDevice = 'ontouchstart' in window;
-
 const animationMixers = [];
 const timer = new THREE.Timer();
 
@@ -182,5 +180,3 @@ export const animator = {
         }
     }
 }
-
-export { isTouchDevice };

@@ -73,13 +73,13 @@ export const viewerState = {
             setupTouchControls();
         }
 
-        // Initialize VR Controllers
-        vrManager.initVRControllers();
-
         // Player rig (dolly) that represents the avatar's world position (feet/base). Camera will be parented to it in VR for locomotion.
         this.playerRig = new THREE.Group();
         this.playerRig.name = 'playerRig';
         this.scene.add(this.playerRig);
+
+        // Initialize VR Controllers
+        vrManager.initVRControllers();
 
         // Set up a perspective camera with a 75-degree FOV
         this.camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);

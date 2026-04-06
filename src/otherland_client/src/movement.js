@@ -23,7 +23,7 @@ const minPitch = (-85 * Math.PI) / 180;
 
 let moveDirection = { x: 0, y: 0 }; // Joystick
 let isSprinting = false;
-const isTouchDevice = 'ontouchstart' in window;
+export const isTouchDevice = 'ontouchstart' in window;
 
 // Touch control setup for mobile devices
 export function setupTouchControls() {
@@ -493,14 +493,14 @@ export const vrManager = {
             const controller = viewerState.renderer.xr.getController(i);
             console.log(`Controller ${i} created:`, controller);
 
-            // Add controller to scene
-            viewerState.scene.add(controller);
+            // Add controller to playerRig so it moves with the player
+            viewerState.playerRig.add(controller);
 
             // Create controller model
             const controllerModelFactory = new XRControllerModelFactory();
             const controllerGrip = viewerState.renderer.xr.getControllerGrip(i);
             controllerGrip.add(controllerModelFactory.createControllerModel(controllerGrip));
-            viewerState.scene.add(controllerGrip);
+            viewerState.playerRig.add(controllerGrip);
 
             // Store references
             this.controllers.push(controller);
