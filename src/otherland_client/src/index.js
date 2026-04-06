@@ -244,6 +244,11 @@ export const viewerState = {
                     if (event.data.gamepad) {
                         console.log(`Controller ${i} has ${event.data.gamepad.buttons.length} buttons and ${event.data.gamepad.axes.length} axes`);
                     }
+                    // Hide default model to show only the Vive controller
+                    if (controller.model) {
+                        controller.model.visible = false;
+                        console.log(`Hidden default model for controller ${i}`);
+                    }
                 });
 
                 controller.addEventListener('disconnected', (event) => {
@@ -461,6 +466,10 @@ export const viewerState = {
                         newPosition.z += correctedMovement.z;
                         avatarState.avatarBody.setTranslation(newPosition, true);
                         avatarState.avatarBody.wakeUp();
+
+                        // Sync playerRig position with avatar body for proper mesh movement and first-person view
+                        this.playerRig.position.x = newPosition.x;
+                        this.playerRig.position.z = newPosition.z;
 
                         console.log(`VR locomotion applied: dx=${correctedMovement.x.toFixed(3)}, dz=${correctedMovement.z.toFixed(3)}`);
                         break; // Use only the first controller with input

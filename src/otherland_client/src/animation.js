@@ -264,6 +264,7 @@ export const animator = {
 
         // Own Interaction with World
         const isVR = !!(viewerState.renderer && viewerState.renderer.xr && viewerState.renderer.xr.isPresenting);
+        const currentCamera = isVR ? viewerState.renderer.xr.getCamera() : viewerState.camera;
         if (viewerState.controls.isLocked || isTouchDevice || isVR) {
             if (avatarState.avatarMesh && avatarState.avatarBody) {
                 
@@ -284,7 +285,7 @@ export const animator = {
 
                 // Movement logic
                 const camDirection = new THREE.Vector3();
-                viewerState.camera.getWorldDirection(camDirection);
+                currentCamera.getWorldDirection(camDirection);
                 camDirection.y = 0;
                 camDirection.normalize();
 
@@ -594,16 +595,17 @@ export const animator = {
         animationMixers.forEach(mixer => mixer.update(delta));
         
         // Hide player indicator (red sphere) in VR to fix left-eye only artifact
+        const isVRRender = !!(viewerState.renderer && viewerState.renderer.xr && viewerState.renderer.xr.isPresenting);
         if (viewerState.playerIndicator) {
-            const isVR = viewerState.renderer && viewerState.renderer.xr && viewerState.renderer.xr.isPresenting;
-            viewerState.playerIndicator.visible = !isVR;
+            viewerState.playerIndicator.visible = !isVRRender;
         }
 
-        // Render main scene
-        viewerState.renderer.render(viewerState.scene, viewerState.camera);
+        // Render main scene - use XR camera in VR for correct viewpoint
+        const renderCamera = isVRRender ? viewerState.renderer.xr.getCamera() : viewerState.camera;
+        viewerState.renderer.render(viewerState.scene, renderCamera);
 
         // Render mini-map (skip in XR mode to avoid framebuffer conflicts)
-        if (!viewerState.renderer.xr.isPresenting) {
+        if (!isVRRender) {
             viewerState.miniMapRenderer.render(viewerState.scene, viewerState.miniMapCamera);
         }
     }
