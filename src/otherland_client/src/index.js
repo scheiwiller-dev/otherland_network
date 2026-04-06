@@ -343,7 +343,12 @@ export const worldController = {
         const khet = this.loadedKhets.get(khetId);
         if (khet) {
             if (khet.mesh) {
-                scene.remove(khet.mesh);
+                const parent = khet.mesh.parent;
+                if (parent) {
+                    parent.remove(khet.mesh);
+                } else {
+                    scene.remove(khet.mesh);
+                }
                 khet.mesh.userData.body = null; // Clear reference
             }
             if (khet.body) world.removeRigidBody(khet.body);
@@ -363,12 +368,19 @@ export const worldController = {
     clearAllKhets(scene, world) {
         for (const khet of this.loadedKhets.values()) {
             if (khet.mesh) {
-                scene.remove(khet.mesh);
+                const parent = khet.mesh.parent;
+                if (parent) {
+                    parent.remove(khet.mesh);
+                } else {
+                    scene.remove(khet.mesh);
+                }
                 khet.mesh.userData.body = null; // Clear reference
             }
             if (khet.body) world.removeRigidBody(khet.body);
         }
         this.loadedKhets.clear();
+        avatarState.setAvatarBody(null);
+        avatarState.setAvatarMesh(null);
         avatarState.setSelectedAvatarId(null);
         this.unloadFallbackGround(scene, world);
     },
