@@ -1,10 +1,14 @@
+import * as THREE from 'three';
 import nipplejs from 'nipplejs';
 import { XRControllerModelFactory } from 'three/examples/jsm/webxr/XRControllerModelFactory.js';
 import { XRHandModelFactory } from 'three/examples/jsm/webxr/XRHandModelFactory.js';
+import RAPIER from '@dimforge/rapier3d-compat';
 
 import { keys, escButtonPress } from './menu.js';
-import { viewerState } from './index.js';
+import { viewerState, sceneObjects } from './index.js';
 import { avatarState } from './avatar.js';
+import { triggerInteraction, preApprovedFunctions } from './interaction.js';
+import { online } from './peermesh.js';
 
 // Constants for movement and jumping
 const BASE_SPEED = 4.0;
@@ -19,6 +23,7 @@ const minPitch = (-85 * Math.PI) / 180;
 
 let moveDirection = { x: 0, y: 0 }; // Joystick
 let isSprinting = false;
+const isTouchDevice = 'ontouchstart' in window;
 
 // Touch control setup for mobile devices
 export function setupTouchControls() {
@@ -128,7 +133,7 @@ export function setupTouchControls() {
 }
 
 // Own Interaction with World
-export function applyPlayerMovement(camDirection, delta) {
+export function applyPlayerMovement(delta) {
 
     const isVR = !!(viewerState.renderer && viewerState.renderer.xr && viewerState.renderer.xr.isPresenting);
     const currentCamera = isVR ? viewerState.renderer.xr.getCamera() : viewerState.camera;
@@ -169,7 +174,6 @@ export function applyPlayerMovement(camDirection, delta) {
             }
 
             // Get player movement direction relative to camera
-            getPlayerMovement(camDirection);
 
             // Calculate input magnitude
             let inputMagnitude;
@@ -289,7 +293,7 @@ export function applyPlayerMovement(camDirection, delta) {
 
             // Update VR controllers and teleportation
             if (isVR) {
-                viewerState.updateVRControllers();
+                vrManager.updateVRControllers();
             }
 
             // Rotate the avatar's quaternion to match the camera direction

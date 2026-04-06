@@ -9,13 +9,15 @@ import { nodeSettings } from './nodeManager.js';
 import { getUserNodeActor } from './khet.js';
 import { triggerInteraction, preApprovedFunctions } from './interaction.js';
 import { online } from './peermesh.js';
-import { getPlayerMovement } from './movement.js';
+import { applyPlayerMovement } from './movement.js';
 
 // Sync Variables
 let lastPositionUpdate = 0;
 const POSITION_UPDATE_INTERVAL = 1000; // 1 second
 let lastPlayerQuery = 0;
 const PLAYER_QUERY_INTERVAL = 5000; // 5 seconds
+
+const isTouchDevice = 'ontouchstart' in window;
 
 const animationMixers = [];
 const timer = new THREE.Timer();
@@ -128,7 +130,7 @@ export const animator = {
         khetState.executors.forEach(executor => executor());
 
         // Handle player input and movement
-        applyPlayerMovement(viewerState.camera, avatarState, delta);
+        applyPlayerMovement(delta);
 
         // Sync all scene objects with their physics bodies, skipping picked-up objects
         sceneObjects.forEach(obj => {
@@ -180,3 +182,5 @@ export const animator = {
         }
     }
 }
+
+export { isTouchDevice };
