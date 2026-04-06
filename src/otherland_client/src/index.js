@@ -6,8 +6,6 @@ document.getElementById('username-screen').style.display = 'none';
 import * as THREE from 'three';
 import { PointerLockControls } from 'three/examples/jsm/controls/PointerLockControls.js';
 import { WebGPURenderer } from 'three/webgpu';
-import { XRControllerModelFactory } from 'three/examples/jsm/webxr/XRControllerModelFactory.js';
-import { XRHandModelFactory } from 'three/examples/jsm/webxr/XRHandModelFactory.js';
 import RAPIER, { init } from '@dimforge/rapier3d-compat';
 
 // Import Internal Modules
@@ -17,6 +15,7 @@ import { online } from './peermesh.js';
 import { nodeSettings } from './nodeManager.js';
 import { logout } from './user.js';
 import { vrManager } from './movement.js';
+import { setupTouchControls } from './movement.js';
 
 // Define pitch constraints to prevent camera flipping
 const maxPitch = (85 * Math.PI) / 180; // Max upward angle (85 degrees)
@@ -67,6 +66,12 @@ export const viewerState = {
         // Create scene and camera
         this.scene = new THREE.Scene();
         this.scene.background = new THREE.Color(0x87ceeb);
+
+        // Setup Touch Controls for mobile devices
+        if ('ontouchstart' in window) {
+            console.log('Touch device detected, setting up touch controls');
+            setupTouchControls();
+        }
 
         // Initialize VR Controllers
         vrManager.initVRControllers();

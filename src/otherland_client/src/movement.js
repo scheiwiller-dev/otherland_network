@@ -1,10 +1,10 @@
 import nipplejs from 'nipplejs';
+import { XRControllerModelFactory } from 'three/examples/jsm/webxr/XRControllerModelFactory.js';
+import { XRHandModelFactory } from 'three/examples/jsm/webxr/XRHandModelFactory.js';
+
 import { keys, escButtonPress } from './menu.js';
 import { viewerState } from './index.js';
 import { avatarState } from './avatar.js';
-
-// Detect if the device supports touch input
-const isTouchDevice = 'ontouchstart' in window;
 
 // Constants for movement and jumping
 const BASE_SPEED = 4.0;
@@ -21,7 +21,7 @@ let moveDirection = { x: 0, y: 0 }; // Joystick
 let isSprinting = false;
 
 // Touch control setup for mobile devices
-if (isTouchDevice) {
+export function setupTouchControls() {
 
     // Create virtual joystick
     const joystickZone = document.getElementById('joystick-zone');
