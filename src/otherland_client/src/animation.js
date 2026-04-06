@@ -425,6 +425,11 @@ export const animator = {
                     // y remains from physics/grounding
                 }
 
+                // Update VR controllers and teleportation
+                if (isVR) {
+                    viewerState.updateVRControllers();
+                }
+
                 // Rotate the avatar's quaternion to match the camera direction
                 const targetQuaternion = new THREE.Quaternion().setFromUnitVectors(
                     new THREE.Vector3(0, 0, 1),

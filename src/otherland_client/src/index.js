@@ -6,6 +6,8 @@ document.getElementById('username-screen').style.display = 'none';
 import * as THREE from 'three';
 import { PointerLockControls } from 'three/examples/jsm/controls/PointerLockControls.js';
 import { WebGPURenderer } from 'three/webgpu';
+import { XRControllerModelFactory } from 'three/examples/jsm/webxr/XRControllerModelFactory.js';
+import { XRHandModelFactory } from 'three/examples/jsm/webxr/XRHandModelFactory.js';
 import RAPIER, { init } from '@dimforge/rapier3d-compat';
 
 // Import Internal Modules
@@ -14,6 +16,12 @@ import { avatarState } from './avatar.js';
 import { online } from './peermesh.js';
 import { nodeSettings } from './nodeManager.js';
 import { logout } from './user.js';
+
+// Define pitch constraints to prevent camera flipping
+const maxPitch = (85 * Math.PI) / 180; // Max upward angle (85 degrees)
+const minPitch = (-85 * Math.PI) / 180; // Max downward angle (-85 degrees)
+let pitch = 0; // Current vertical angle
+let yaw = 0; // Current horizontal angle
 
 // Define Viewer State and init
 export const viewerState = {
@@ -30,6 +38,13 @@ export const viewerState = {
     miniMapRenderer: null,    // Add mini-map renderer
     playerIndicator: null,    // Add player indicator
     playerRig: null,          // Player rig (dolly) for avatar + VR locomotion (camera parented here in VR)
+
+    // VR Controller State
+    controllers: [],          // Array of XR controllers
+    controllerGrips: [],      // Controller grip models
+    teleportRaycaster: new THREE.Raycaster(), // For teleportation
+    teleportMarker: null,     // Visual marker for teleport destination
+    isTeleporting: false,     // Flag to prevent multiple teleports
 
     // Initialize Physics World
     async init () {
@@ -58,6 +73,9 @@ export const viewerState = {
         // Create scene and camera
         this.scene = new THREE.Scene();
         this.scene.background = new THREE.Color(0x87ceeb);
+
+        // Initialize VR Controllers (after scene is created)
+        this.initVRControllers();
 
         // Player rig (dolly) that represents the avatar's world position (feet/base). Camera will be parented to it in VR for locomotion.
         this.playerRig = new THREE.Group();
@@ -174,14 +192,283 @@ export const viewerState = {
             online.quickConnect = true;
             document.getElementById("quick-connect-invitation").style.display = "block";
         };
-    }
-}
+        },
 
-// Define pitch constraints to prevent camera flipping
-const maxPitch = (85 * Math.PI) / 180; // Max upward angle (85 degrees)
-const minPitch = (-85 * Math.PI) / 180; // Max downward angle (-85 degrees)
-let pitch = 0; // Current vertical angle
-let yaw = 0; // Current horizontal angle
+        // Initialize VR Controllers
+        initVRControllers() {
+            console.log('Initializing VR controllers...');
+
+            // Create controller instances
+            for (let i = 0; i < 2; i++) {
+                const controller = this.renderer.xr.getController(i);
+                console.log(`Controller ${i} created:`, controller);
+
+                // Add controller to scene
+                this.scene.add(controller);
+
+                // Create controller model
+                const controllerModelFactory = new XRControllerModelFactory();
+                const controllerGrip = this.renderer.xr.getControllerGrip(i);
+                controllerGrip.add(controllerModelFactory.createControllerModel(controllerGrip));
+                this.scene.add(controllerGrip);
+
+                // Store references
+                this.controllers.push(controller);
+                this.controllerGrips.push(controllerGrip);
+
+                // Add event listeners for buttons
+                controller.addEventListener('selectstart', (event) => {
+                    console.log(`Controller ${i} select button pressed`);
+                    this.handleControllerSelectStart(i, event);
+                });
+
+                controller.addEventListener('selectend', (event) => {
+                    console.log(`Controller ${i} select button released`);
+                    this.handleControllerSelectEnd(i, event);
+                });
+
+                controller.addEventListener('squeezestart', (event) => {
+                    console.log(`Controller ${i} squeeze button pressed`);
+                    this.handleControllerSqueezeStart(i, event);
+                });
+
+                controller.addEventListener('squeezeend', (event) => {
+                    console.log(`Controller ${i} squeeze button released`);
+                    this.handleControllerSqueezeEnd(i, event);
+                });
+
+                // Add connected/disconnected listeners
+                controller.addEventListener('connected', (event) => {
+                    console.log(`Controller ${i} connected:`, event.data);
+                    console.log(`Controller ${i} gamepad:`, event.data.gamepad);
+                    if (event.data.gamepad) {
+                        console.log(`Controller ${i} has ${event.data.gamepad.buttons.length} buttons and ${event.data.gamepad.axes.length} axes`);
+                    }
+                });
+
+                controller.addEventListener('disconnected', (event) => {
+                    console.log(`Controller ${i} disconnected`);
+                });
+            }
+
+            // Create teleport marker
+            this.createTeleportMarker();
+
+            console.log('VR controllers initialized');
+        },
+
+        // Create visual marker for teleport destination
+        createTeleportMarker() {
+            console.log('Creating teleport marker...');
+
+            // Create a ring geometry for the teleport marker
+            const markerGeometry = new THREE.RingGeometry(0.1, 0.15, 16);
+            const markerMaterial = new THREE.MeshBasicMaterial({
+                color: 0x00ff00,
+                transparent: true,
+                opacity: 0.8,
+                side: THREE.DoubleSide
+            });
+
+            this.teleportMarker = new THREE.Mesh(markerGeometry, markerMaterial);
+            this.teleportMarker.rotation.x = -Math.PI / 2; // Lay flat on ground
+            this.teleportMarker.visible = false; // Initially hidden
+            this.scene.add(this.teleportMarker);
+
+            console.log('Teleport marker created');
+        },
+
+        // Handle controller select start (trigger button)
+        handleControllerSelectStart(controllerIndex, event) {
+            console.log(`Controller ${controllerIndex} select start - initiating teleport raycast`);
+
+            if (this.isTeleporting) {
+                console.log('Teleport already in progress, ignoring');
+                return;
+            }
+
+            const controller = this.controllers[controllerIndex];
+            if (!controller) {
+                console.warn(`Controller ${controllerIndex} not found`);
+                return;
+            }
+
+            // Set up raycaster from controller
+            this.teleportRaycaster.setFromXRController(controller);
+
+            // Raycast down to find teleport destination
+            const intersects = this.teleportRaycaster.intersectObjects(sceneObjects, true);
+
+            if (intersects.length > 0) {
+                const intersection = intersects[0];
+                console.log(`Teleport target found at:`, intersection.point);
+
+                // Position marker at intersection point
+                this.teleportMarker.position.copy(intersection.point);
+                this.teleportMarker.position.y += 0.01; // Slightly above surface
+                this.teleportMarker.visible = true;
+
+                // Store teleport destination
+                this.pendingTeleportPosition = intersection.point.clone();
+                this.isTeleporting = true;
+
+                console.log('Teleport marker positioned and visible');
+            } else {
+                console.log('No valid teleport target found');
+            }
+        },
+
+        // Handle controller select end (trigger release)
+        handleControllerSelectEnd(controllerIndex, event) {
+            console.log(`Controller ${controllerIndex} select end`);
+
+            if (this.isTeleporting && this.pendingTeleportPosition) {
+                console.log('Executing teleport to:', this.pendingTeleportPosition);
+
+                // Teleport player rig to new position
+                if (this.playerRig) {
+                    // Keep the Y position relative to avatar height
+                    const currentY = this.playerRig.position.y;
+                    this.playerRig.position.copy(this.pendingTeleportPosition);
+                    this.playerRig.position.y = currentY;
+
+                    console.log('Player rig teleported to new position');
+
+                    // Also update avatar position if it exists
+                    if (avatarState.avatarBody) {
+                        const newPos = avatarState.avatarBody.translation();
+                        newPos.x = this.pendingTeleportPosition.x;
+                        newPos.z = this.pendingTeleportPosition.z;
+                        avatarState.avatarBody.setTranslation(newPos, true);
+                        avatarState.avatarBody.wakeUp();
+                        console.log('Avatar body position updated');
+                    }
+                }
+
+                // Hide marker
+                this.teleportMarker.visible = false;
+                this.isTeleporting = false;
+                this.pendingTeleportPosition = null;
+
+                console.log('Teleport completed');
+            }
+        },
+
+        // Handle controller squeeze start (grip button)
+        handleControllerSqueezeStart(controllerIndex, event) {
+            console.log(`Controller ${controllerIndex} squeeze start`);
+            // Could be used for other interactions like grabbing objects
+        },
+
+        // Handle controller squeeze end (grip release)
+        handleControllerSqueezeEnd(controllerIndex, event) {
+            console.log(`Controller ${controllerIndex} squeeze end`);
+            // Could be used for releasing grabbed objects
+        },
+
+        // Update VR controllers each frame
+        updateVRControllers() {
+            // Handle locomotion via thumbsticks
+            this.handleVRThumbstickLocomotion();
+
+            // Update teleport raycasting for active controllers
+            for (let i = 0; i < this.controllers.length; i++) {
+                const controller = this.controllers[i];
+                if (controller && controller.visible) {
+                    // Check if trigger is being held for teleport preview
+                    const gamepad = controller.inputSource?.gamepad;
+                    if (gamepad && gamepad.buttons.length > 0) {
+                        const triggerPressed = gamepad.buttons[0]?.pressed; // Primary trigger
+
+                        if (triggerPressed && !this.isTeleporting) {
+                            // Update teleport raycast continuously while trigger is held
+                            this.teleportRaycaster.setFromXRController(controller);
+                            const intersects = this.teleportRaycaster.intersectObjects(sceneObjects, true);
+
+                            if (intersects.length > 0) {
+                                const intersection = intersects[0];
+                                this.teleportMarker.position.copy(intersection.point);
+                                this.teleportMarker.position.y += 0.01;
+                                this.teleportMarker.visible = true;
+                                this.pendingTeleportPosition = intersection.point.clone();
+                            } else {
+                                this.teleportMarker.visible = false;
+                                this.pendingTeleportPosition = null;
+                            }
+                        } else if (!triggerPressed && this.teleportMarker.visible && !this.isTeleporting) {
+                            // Hide marker when trigger released without teleporting
+                            this.teleportMarker.visible = false;
+                            this.pendingTeleportPosition = null;
+                        }
+                    }
+                }
+            }
+        },
+
+        // Handle VR thumbstick locomotion
+        handleVRThumbstickLocomotion() {
+            if (!avatarState.avatarBody || !avatarState.isGrounded || !this.playerRig) {
+                return;
+            }
+
+            // Use the first available controller's thumbstick for locomotion
+            for (let i = 0; i < this.controllers.length; i++) {
+                const controller = this.controllers[i];
+                if (controller && controller.inputSource?.gamepad) {
+                    const gamepad = controller.inputSource.gamepad;
+                    if (gamepad.axes.length >= 2) {
+                        const thumbstickX = gamepad.axes[0]; // Left/right
+                        const thumbstickY = gamepad.axes[1]; // Forward/backward
+
+                        // Apply deadzone
+                        const deadzone = 0.1;
+                        const magnitude = Math.sqrt(thumbstickX * thumbstickX + thumbstickY * thumbstickY);
+                        if (magnitude < deadzone) {
+                            continue; // Skip if thumbstick is in deadzone
+                        }
+
+                        console.log(`Controller ${i} thumbstick: x=${thumbstickX.toFixed(2)}, y=${thumbstickY.toFixed(2)}`);
+
+                        // Get camera direction for movement relative to view
+                        const camDirection = new THREE.Vector3();
+                        this.renderer.xr.getCamera().getWorldDirection(camDirection);
+                        camDirection.y = 0;
+                        camDirection.normalize();
+
+                        // Calculate movement direction
+                        const right = new THREE.Vector3().crossVectors(camDirection, new THREE.Vector3(0, 1, 0));
+                        const movementDirection = new THREE.Vector3()
+                            .addScaledVector(camDirection, -thumbstickY) // Forward/backward
+                            .addScaledVector(right, thumbstickX); // Left/right
+
+                        movementDirection.normalize();
+
+                        // Apply movement
+                        const speed = 2.0; // VR locomotion speed
+                        const delta = 1/60; // Assume 60fps for now
+                        const desiredMovement = movementDirection.clone().multiplyScalar(speed * delta);
+
+                        // Use character controller for collision-aware movement
+                        const collider = avatarState.avatarBody.collider(0);
+                        this.characterController.computeColliderMovement(
+                            collider,
+                            new RAPIER.Vector3(desiredMovement.x, 0, desiredMovement.z)
+                        );
+
+                        const correctedMovement = this.characterController.computedMovement();
+                        const newPosition = avatarState.avatarBody.translation();
+                        newPosition.x += correctedMovement.x;
+                        newPosition.z += correctedMovement.z;
+                        avatarState.avatarBody.setTranslation(newPosition, true);
+                        avatarState.avatarBody.wakeUp();
+
+                        console.log(`VR locomotion applied: dx=${correctedMovement.x.toFixed(3)}, dz=${correctedMovement.z.toFixed(3)}`);
+                        break; // Use only the first controller with input
+                    }
+                }
+            }
+        }
+};
 
 // Class to manage camera positioning relative to a target (e.g., avatar)
 export class CameraController {
