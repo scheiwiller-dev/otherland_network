@@ -1,7 +1,6 @@
 // chat.js
 import { online } from './peermesh.js';
-import { nodeSettings } from './nodeManager.js';
-import { getUserNodeActor } from './khet.js';
+import { nodeSettings, getUserNodeActor } from './nodeManager.js';
 import { user } from './user.js';
 
 export const chat = {

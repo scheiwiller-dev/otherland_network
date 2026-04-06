@@ -1,6 +1,6 @@
 import { AuthClient } from "@icp-sdk/auth/client";
 import { AnonymousIdentity } from "@icp-sdk/core/agent";
-import { getUserNodeActor } from './khet.js';
+import { getUserNodeActor } from './nodeManager.js';
 import { CANISTER_IDS } from './canisterIds.js';
 import { updateFriendsList, handleInvitation } from './friends.js';
 import { showLoggedInUI } from './menu.js';

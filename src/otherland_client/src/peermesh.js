@@ -1,11 +1,11 @@
 import Peer from 'peerjs';
-import { nodeSettings } from './nodeManager.js';
+import { nodeSettings, getUserNodeActor } from './nodeManager.js';
 import { Principal } from '@icp-sdk/core/principal';
 import { viewerState } from './index.js';
 import { avatarState } from './avatar.js';
 import { userIsInWorld } from './menu.js';
 import { chat } from './chat.js';
-import { khetController, loadKhetMeshOnly, saveToCache, getFromCache, getUserNodeActor } from './khet.js';
+import { khetController, loadKhetMeshOnly, saveToCache, getFromCache } from './khet.js';
 
 function prepareForSending(khet) {
     const prepared = { ...khet };

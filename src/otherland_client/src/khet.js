@@ -2,58 +2,13 @@
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import RAPIER from '@dimforge/rapier3d-compat';
+import { Principal } from '@icp-sdk/core/principal';
 import * as esprima from 'esprima';
 
-// Import necessary libraries for parsing and interacting with the Internet Computer
-import { Actor, HttpAgent } from '@icp-sdk/core/agent';
-import { Principal } from '@icp-sdk/core/principal';
-import { idlFactory as userNodeIdlFactory } from '../../declarations/user_node';
-
 // Import Internal Modules
-import { nodeSettings } from './nodeManager.js';
-import { authReady, getIdentity } from './user.js';
+import { nodeSettings, getUserNodeActor } from './nodeManager.js';
 import { online } from './peermesh.js';
 import { viewerState } from './index.js';
-
-let userNodeAgentInstance = null;
-let userNodeActor = null;
-
-// Get user node actor for the current user's node
-export async function getUserNodeActor() {
-    // Guard for new users who don't have a node yet (prevents canister ID error during first II login)
-    if (!nodeSettings.nodeId || typeof nodeSettings.nodeId !== 'string') {
-        console.warn('No user node ID available yet - returning null (normal for new users)');
-        return null;
-    }
-
-    if (!userNodeAgentInstance) {
-        await authReady;
-
-        userNodeAgentInstance = new HttpAgent({ 
-            host: process.env.DFX_NETWORK === 'local' ? 'http://localhost:4943' : window.location.origin, 
-            identity: getIdentity() 
-        });
-
-        if (process.env.DFX_NETWORK === 'local') {
-            try {
-                await userNodeAgentInstance.fetchRootKey();
-                console.log('Root key fetched successfully');
-            } catch (err) {
-                console.error('Unable to fetch root key:', err);
-                throw err;
-            }
-        }
-    }
-
-    if (!userNodeActor) {
-        userNodeActor = Actor.createActor(userNodeIdlFactory, { 
-            agent: userNodeAgentInstance, 
-            canisterId: nodeSettings.nodeId 
-        });
-    }
-
-    return userNodeActor;
-}
 
 // Compute SHA-256 hash of a Uint8Array
 export async function computeSHA256(data) {
@@ -61,6 +16,18 @@ export async function computeSHA256(data) {
     return Array.from(new Uint8Array(buffer))
         .map(b => b.toString(16).padStart(2, '0'))
         .join('');
+}
+
+// Khet Type Mapping
+export function mapKhetType(typeStr) {
+    switch (typeStr) {
+        case 'SceneObject': return "SceneObject";
+        case 'InteractiveObject': return "InteractiveObject";
+        case 'MobileObject': return "MobileObject";
+        case 'Entity': return "Entity";
+        case 'Avatar': return "Avatar";
+        default: throw new Error(`Unknown khetType: ${typeStr}`);
+    }
 }
 
 // IndexedDB Cache Setup
@@ -340,19 +307,6 @@ export const khetController = {
         return;
     }
 };
-
-// **Khet Type Mapping**
-// Function to map string representations of Khet types to Motoko variants
-export function mapKhetType(typeStr) {
-    switch (typeStr) {
-      case 'SceneObject': return "SceneObject";
-      case 'InteractiveObject': return "InteractiveObject";
-      case 'MobileObject': return "MobileObject";
-      case 'Entity': return "Entity";
-      case 'Avatar': return "Avatar";
-      default: throw new Error(`Unknown khetType: ${typeStr}`);
-    }
-  }
 
 // **Khet Code Interpreter**
 // Simple interpreter for Khet code using Esprima to parse and validate expressions

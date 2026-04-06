@@ -13,6 +13,7 @@ https://www.youtube.com/@Otherland_Network
 
 - Dfinity ICP Application
 - written in Motoko and HTML5 / CSS / JS
+- for VR, Desktop and Mobile (cross play)
 - using three.js for 3D Rendering
 - using Rapier as Physics Engine
 - using peer.js for P2P communication
@@ -30,16 +31,16 @@ https://www.youtube.com/@Otherland_Network
 
 `Future Roadmap`
 
-Implementing functionality to placeholdes UI areas:
 - In-World Chat and VoiceChat (Global / Channel / Single)
 - Inventory, Items and Scarcity mechanisms for RPG economy
-- Radar nor Interaction Points
+- Radar for Interaction Points
 - Friendlist with direct calling, messaging and data sharing
 - Better Avatar and visibility management
 - Automate user movement & gestures with pre recorded macros
 - Better Interface for Node and TreeHouse management, allow external asset sources
 - Wallet to pay for all expenses in Otherland and to receive donations
 - Convert glTF, obj, 3ds and other file formats to glb in App
+- NPCs controlled by LLMs through APIs (custom)
 
 `Setup IDE`
 

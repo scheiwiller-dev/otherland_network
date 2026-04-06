@@ -1,8 +1,7 @@
 import { Actor, HttpAgent } from '@icp-sdk/core/agent';
-import { Principal } from '@icp-sdk/core/principal';
 import { idlFactory as cardinalIdlFactory } from '../../declarations/cardinal'; // Adjust path based on your project structure
 import { user, authReady, getIdentity, logout } from './user.js';
-import { khetController, getUserNodeActor, updateKhetTable } from './khet.js';
+import { khetController, updateKhetTable } from './khet.js';
 import { online } from './peermesh.js'
 import { CANISTER_IDS } from './canisterIds.js';
 
@@ -42,6 +41,46 @@ export async function getCardinalActor() {
     }
 
     return cardinalActor;
+}
+
+let userNodeAgentInstance = null;
+let userNodeActor = null;
+
+// Get user node actor for the current user's node
+export async function getUserNodeActor() {
+    // Guard for new users who don't have a node yet (prevents canister ID error during first II login)
+    if (!nodeSettings.nodeId || typeof nodeSettings.nodeId !== 'string') {
+        console.warn('No user node ID available yet - returning null (normal for new users)');
+        return null;
+    }
+
+    if (!userNodeAgentInstance) {
+        await authReady;
+
+        userNodeAgentInstance = new HttpAgent({ 
+            host: process.env.DFX_NETWORK === 'local' ? 'http://localhost:4943' : window.location.origin, 
+            identity: getIdentity() 
+        });
+
+        if (process.env.DFX_NETWORK === 'local') {
+            try {
+                await userNodeAgentInstance.fetchRootKey();
+                console.log('Root key fetched successfully');
+            } catch (err) {
+                console.error('Unable to fetch root key:', err);
+                throw err;
+            }
+        }
+    }
+
+    if (!userNodeActor) {
+        userNodeActor = Actor.createActor(userNodeIdlFactory, { 
+            agent: userNodeAgentInstance, 
+            canisterId: nodeSettings.nodeId 
+        });
+    }
+
+    return userNodeActor;
 }
 
 // Get List of all Canisters with Access

@@ -3,8 +3,8 @@ import * as THREE from 'three';
 import { PointerLockControls } from 'three/examples/jsm/controls/PointerLockControls.js';
 import { Principal } from '@icp-sdk/core/principal';
 import { viewerState, sceneObjects, worldController, animationMixers, khetState } from './index.js';
-import { khetController, clearAllKhets, getUserNodeActor, updateKhetTable, changekhetEditorDrawer } from './khet.js';
-import { nodeSettings, requestNewCanister, refreshNodeList, getAccessibleCanisters, getCardinalActor } from './nodeManager.js';
+import { khetController, clearAllKhets, updateKhetTable, changekhetEditorDrawer } from './khet.js';
+import { nodeSettings, requestNewCanister, refreshNodeList, getAccessibleCanisters, getCardinalActor, getUserNodeActor } from './nodeManager.js';
 import { initAuth, getIdentity, login, user, updateAccountSwitcher, updateProfileDisplay } from './user.js';
 import { chat, initChat } from './chat.js';
 import { online } from './peermesh.js'

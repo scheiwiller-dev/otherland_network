@@ -6,8 +6,7 @@ import RAPIER from '@dimforge/rapier3d-compat';
 import { viewerState, sceneObjects, khetState } from './index.js';
 import { avatarState } from './avatar.js';
 import { nodeSettings } from './nodeManager.js';
-import { getUserNodeActor } from './khet.js';
-import { triggerInteraction, preApprovedFunctions } from './interaction.js';
+import { getUserNodeActor } from './nodeManager.js';
 import { online } from './peermesh.js';
 import { applyPlayerMovement } from './movement.js';
 
