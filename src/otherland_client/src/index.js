@@ -45,6 +45,10 @@ export const viewerState = {
     teleportRaycaster: new THREE.Raycaster(), // For teleportation
     teleportMarker: null,     // Visual marker for teleport destination
     isTeleporting: false,     // Flag to prevent multiple teleports
+    pendingTeleportPosition: null, // Pending position for teleport
+    teleportAimActive: false,     // Whether currently aiming/teleporting
+    previousTriggerValues: [0, 0], // For detecting full press edge on analog trigger
+    lastDebugTime: 0,             // Throttled debug for VR controller state
 
     // Initialize Physics World
     async init () {
@@ -76,6 +80,13 @@ export const viewerState = {
 
         // Initialize VR Controllers (after scene is created)
         this.initVRControllers();
+
+        // Reset VR teleport state
+        this.pendingTeleportPosition = null;
+        this.teleportAimActive = false;
+        this.isTeleporting = false;
+        this.previousTriggerValues = [0, 0];
+        this.lastDebugTime = 0;
 
         // Player rig (dolly) that represents the avatar's world position (feet/base). Camera will be parented to it in VR for locomotion.
         this.playerRig = new THREE.Group();
@@ -244,6 +255,8 @@ export const viewerState = {
                     if (event.data.gamepad) {
                         console.log(`Controller ${i} has ${event.data.gamepad.buttons.length} buttons and ${event.data.gamepad.axes.length} axes`);
                     }
+                    // Assign inputSource so polling and raycasting see it in update loop
+                    controller.inputSource = event.inputSource || event.data;
                     // Hide default model to show only the Vive controller
                     if (controller.model) {
                         controller.model.visible = false;
@@ -253,6 +266,7 @@ export const viewerState = {
 
                 controller.addEventListener('disconnected', (event) => {
                     console.log(`Controller ${i} disconnected`);
+                    controller.inputSource = null;
                 });
             }
 
@@ -285,78 +299,71 @@ export const viewerState = {
 
         // Handle controller select start (trigger button)
         handleControllerSelectStart(controllerIndex, event) {
-            console.log(`Controller ${controllerIndex} select start - initiating teleport raycast`);
-
-            if (this.isTeleporting) {
-                console.log('Teleport already in progress, ignoring');
-                return;
-            }
-
+            console.log(`Controller ${controllerIndex} select button pressed`);
             const controller = this.controllers[controllerIndex];
-            if (!controller) {
-                console.warn(`Controller ${controllerIndex} not found`);
-                return;
-            }
+            if (!controller) return;
 
-            // Set up raycaster from controller
+            this.teleportAimActive = true;
+            this.isTeleporting = true;
+
+            // Initial raycast to start preview
             this.teleportRaycaster.setFromXRController(controller);
-
-            // Raycast down to find teleport destination
             const intersects = this.teleportRaycaster.intersectObjects(sceneObjects, true);
-
             if (intersects.length > 0) {
                 const intersection = intersects[0];
-                console.log(`Teleport target found at:`, intersection.point);
-
-                // Position marker at intersection point
                 this.teleportMarker.position.copy(intersection.point);
-                this.teleportMarker.position.y += 0.01; // Slightly above surface
+                this.teleportMarker.position.y += 0.02;
                 this.teleportMarker.visible = true;
-
-                // Store teleport destination
                 this.pendingTeleportPosition = intersection.point.clone();
-                this.isTeleporting = true;
-
-                console.log('Teleport marker positioned and visible');
-            } else {
-                console.log('No valid teleport target found');
+                console.log(`[Teleport] Initial preview at`, intersection.point);
             }
         },
 
         // Handle controller select end (trigger release)
         handleControllerSelectEnd(controllerIndex, event) {
-            console.log(`Controller ${controllerIndex} select end`);
-
-            if (this.isTeleporting && this.pendingTeleportPosition) {
-                console.log('Executing teleport to:', this.pendingTeleportPosition);
-
-                // Teleport player rig to new position
-                if (this.playerRig) {
-                    // Keep the Y position relative to avatar height
-                    const currentY = this.playerRig.position.y;
-                    this.playerRig.position.copy(this.pendingTeleportPosition);
-                    this.playerRig.position.y = currentY;
-
-                    console.log('Player rig teleported to new position');
-
-                    // Also update avatar position if it exists
-                    if (avatarState.avatarBody) {
-                        const newPos = avatarState.avatarBody.translation();
-                        newPos.x = this.pendingTeleportPosition.x;
-                        newPos.z = this.pendingTeleportPosition.z;
-                        avatarState.avatarBody.setTranslation(newPos, true);
-                        avatarState.avatarBody.wakeUp();
-                        console.log('Avatar body position updated');
-                    }
-                }
-
-                // Hide marker
+            console.log(`Controller ${controllerIndex} select button released`);
+            if (this.teleportAimActive && this.pendingTeleportPosition) {
+                this.performTeleport();
+            } else {
                 this.teleportMarker.visible = false;
+                this.teleportAimActive = false;
                 this.isTeleporting = false;
-                this.pendingTeleportPosition = null;
-
-                console.log('Teleport completed');
             }
+        },
+
+        // Perform the actual teleport using the pending position
+        performTeleport() {
+            if (!this.pendingTeleportPosition) return;
+
+            console.log('Executing teleport to:', this.pendingTeleportPosition);
+
+            // Teleport player rig to new position
+            if (this.playerRig) {
+                // Keep the Y position relative to avatar height
+                const currentY = this.playerRig.position.y;
+                this.playerRig.position.copy(this.pendingTeleportPosition);
+                this.playerRig.position.y = currentY;
+
+                console.log('Player rig teleported to new position');
+
+                // Also update avatar position if it exists
+                if (avatarState.avatarBody) {
+                    const newPos = avatarState.avatarBody.translation();
+                    newPos.x = this.pendingTeleportPosition.x;
+                    newPos.z = this.pendingTeleportPosition.z;
+                    avatarState.avatarBody.setTranslation(newPos, true);
+                    avatarState.avatarBody.wakeUp();
+                    console.log('Avatar body position updated');
+                }
+            }
+
+            // Hide marker and reset state
+            this.teleportMarker.visible = false;
+            this.isTeleporting = false;
+            this.teleportAimActive = false;
+            this.pendingTeleportPosition = null;
+
+            console.log('Teleport completed');
         },
 
         // Handle controller squeeze start (grip button)
@@ -376,34 +383,32 @@ export const viewerState = {
             // Handle locomotion via thumbsticks
             this.handleVRThumbstickLocomotion();
 
-            // Update teleport raycasting for active controllers
-            for (let i = 0; i < this.controllers.length; i++) {
-                const controller = this.controllers[i];
-                if (controller && controller.visible) {
-                    // Check if trigger is being held for teleport preview
-                    const gamepad = controller.inputSource?.gamepad;
-                    if (gamepad && gamepad.buttons.length > 0) {
-                        const triggerPressed = gamepad.buttons[0]?.pressed; // Primary trigger
+            // Throttled debug to diagnose controller/gamepad/analog input (every 500ms)
+            const now = Date.now();
+            if (now - (this.lastDebugTime || 0) > 500) {
+                console.log(`[VR-DEBUG] updateVRControllers - #controllers=${this.controllers.length}, presenting=${!!(this.renderer.xr && this.renderer.xr.isPresenting)}`);
+                for (let j = 0; j < this.controllers.length; j++) {
+                    const c = this.controllers[j];
+                    const gp = c.inputSource?.gamepad;
+                    console.log(`[VR-DEBUG] C${j}: visible=${!!c.visible}, input=${!!c.inputSource}, gamepad=${!!gp}, buttons=${gp?.buttons?.length || 0}, trigger=${gp ? (gp.buttons[0]?.value||0).toFixed(2) : 'N/A'}`);
+                }
+                this.lastDebugTime = now;
+            }
 
-                        if (triggerPressed && !this.isTeleporting) {
-                            // Update teleport raycast continuously while trigger is held
-                            this.teleportRaycaster.setFromXRController(controller);
-                            const intersects = this.teleportRaycaster.intersectObjects(sceneObjects, true);
+            // Update teleport preview if actively aiming (uses events for start/end, loop for live update)
+            if (this.teleportAimActive && this.teleportMarker) {
+                for (let i = 0; i < this.controllers.length; i++) {
+                    const controller = this.controllers[i];
+                    if (controller) {
+                        this.teleportRaycaster.setFromXRController(controller);
+                        const intersects = this.teleportRaycaster.intersectObjects(sceneObjects, true);
 
-                            if (intersects.length > 0) {
-                                const intersection = intersects[0];
-                                this.teleportMarker.position.copy(intersection.point);
-                                this.teleportMarker.position.y += 0.01;
-                                this.teleportMarker.visible = true;
-                                this.pendingTeleportPosition = intersection.point.clone();
-                            } else {
-                                this.teleportMarker.visible = false;
-                                this.pendingTeleportPosition = null;
-                            }
-                        } else if (!triggerPressed && this.teleportMarker.visible && !this.isTeleporting) {
-                            // Hide marker when trigger released without teleporting
-                            this.teleportMarker.visible = false;
-                            this.pendingTeleportPosition = null;
+                        if (intersects.length > 0) {
+                            const intersection = intersects[0];
+                            this.teleportMarker.position.copy(intersection.point);
+                            this.teleportMarker.position.y += 0.02;
+                            this.pendingTeleportPosition = intersection.point.clone();
+                            break; // Update from first valid controller
                         }
                     }
                 }

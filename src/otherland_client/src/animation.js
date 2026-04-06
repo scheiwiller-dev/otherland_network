@@ -313,8 +313,8 @@ export const animator = {
                     localDirection.normalize();
                 }
 
-                // Transform to world space
-                const euler = new THREE.Euler().setFromQuaternion(viewerState.camera.quaternion, 'YXZ');
+                // Transform to world space (use XR camera in VR)
+                const euler = new THREE.Euler().setFromQuaternion(currentCamera.quaternion, 'YXZ');
                 const yawQuaternion = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), euler.y);
                 const movementDirection = localDirection.applyQuaternion(yawQuaternion);
 
@@ -414,16 +414,6 @@ export const animator = {
                     }
                 } else {
                     avatarState.avatarMesh.position.set(pos.x, pos.y, pos.z);
-                }
-
-                // In VR, sync rig to XR camera world position (x/z) so physical head movement + WASD locomotion both affect avatar/camera
-                if (isVR && viewerState.playerRig) {
-                    const xrCamera = viewerState.renderer.xr.getCamera();
-                    const camWorldPos = new THREE.Vector3();
-                    xrCamera.getWorldPosition(camWorldPos);
-                    viewerState.playerRig.position.x = camWorldPos.x;
-                    viewerState.playerRig.position.z = camWorldPos.z;
-                    // y remains from physics/grounding
                 }
 
                 // Update VR controllers and teleportation
@@ -562,7 +552,7 @@ export const animator = {
 
         // Sync all scene objects with their physics bodies, skipping picked-up objects
         sceneObjects.forEach(obj => {
-            if (obj.userData && obj.userData.body && !obj.userData.isAvatar /* && obj.khet.khetType!=="SceneObject"*/) {
+            if (obj.userData && obj.userData.body && !obj.userData.isAvatar) {
                 
                 if (obj.userData.isPickedUp) {
                     
