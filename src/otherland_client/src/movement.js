@@ -2,6 +2,8 @@ import * as THREE from 'three';
 import nipplejs from 'nipplejs';
 import { XRControllerModelFactory } from 'three/examples/jsm/webxr/XRControllerModelFactory.js';
 import { XRHandModelFactory } from 'three/examples/jsm/webxr/XRHandModelFactory.js';
+import { HTMLMesh } from 'three/examples/jsm/interactive/HTMLMesh.js';
+import { InteractiveGroup } from 'three/examples/jsm/interactive/InteractiveGroup.js';
 import RAPIER from '@dimforge/rapier3d-compat';
 
 import { keys, escButtonPress } from './menu.js';
@@ -449,6 +451,10 @@ export const vrManager = {
     previousTriggerValues: [0, 0], // For detecting full press edge on analog trigger
     lastDebugTime: 0,             // Throttled debug for VR controller state
 
+    // VR UI Panels
+    uiPanels: [],             // Array of active UI panels
+    interactiveGroup: null,   // InteractiveGroup for VR UI interaction
+
     // Initialize VR Controllers
     initVRControllers() {
         console.log('Initializing VR controllers...');
@@ -474,9 +480,16 @@ export const vrManager = {
             
             // Eye height offset (local to rig; adjust to match avatar height)
             xrCamera.position.y = 1.6;
-            
+
+            // Create InteractiveGroup for VR UI interaction
+            this.interactiveGroup = new InteractiveGroup(viewerState.renderer, viewerState.scene);
+            viewerState.scene.add(this.interactiveGroup);
+
+            // Create VR UI panel for the main menu
+            this.createUIPanel('main-menu', new THREE.Vector3(0, 1.5, -1), new THREE.Euler(-Math.PI / 6, 0, 0), 0.5);
+
             console.log('VR session started - XR camera attached to playerRig');
-            
+
             // Unlock pointer controls when entering VR
             if (viewerState.controls && viewerState.controls.isLocked) {
                 viewerState.controls.unlock();
@@ -485,6 +498,10 @@ export const vrManager = {
 
         viewerState.renderer.xr.addEventListener('sessionend', () => {
             console.log('VR session ended');
+            // Remove VR UI panels
+            this.uiPanels.forEach(panel => {
+                this.removeUIPanel(panel.id);
+            });
             // Camera will be managed by Three.js on exit
         });
 
@@ -526,6 +543,10 @@ export const vrManager = {
                 console.log(`Controller ${i} squeeze button released`);
                 this.handleControllerSqueezeEnd(i, event);
             });
+
+            // Add interactive group event listeners for UI interaction
+            controller.addEventListener('selectstart', () => this.interactiveGroup?.handlePointerDown(controller));
+            controller.addEventListener('selectend', () => this.interactiveGroup?.handlePointerUp(controller));
 
             // Add connected/disconnected listeners
             controller.addEventListener('connected', (event) => {
@@ -574,6 +595,72 @@ export const vrManager = {
         viewerState.scene.add(this.teleportMarker);
 
         console.log('Teleport marker created');
+    },
+
+    // Create a VR UI panel from a DOM element
+    createUIPanel(elementId, position = new THREE.Vector3(0, 1.5, -1), rotation = new THREE.Euler(-Math.PI / 6, 0, 0), scale = 0.5, attachToRig = true) {
+        const uiElement = document.getElementById(elementId);
+        if (!uiElement) {
+            console.error(`Element with id '${elementId}' not found`);
+            return null;
+        }
+
+        // Clone the element to avoid modifying the original
+        const clonedElement = uiElement.cloneNode(true);
+        clonedElement.style.position = 'absolute';
+        clonedElement.style.left = '-9999px';
+        clonedElement.style.top = '0';
+        clonedElement.style.width = '800px';
+        clonedElement.style.height = '600px';
+        clonedElement.style.display = 'flex'; // Ensure it's visible
+        document.body.appendChild(clonedElement);
+
+        // Create HTMLMesh
+        const htmlMesh = new HTMLMesh(clonedElement);
+        htmlMesh.position.copy(position);
+        htmlMesh.rotation.copy(rotation);
+        htmlMesh.scale.setScalar(scale);
+
+        // Attach to playerRig so it follows the avatar
+        const parent = attachToRig ? viewerState.playerRig : viewerState.scene;
+        parent.add(htmlMesh);
+
+        // Add to interactive group for VR interaction
+        if (this.interactiveGroup) {
+            this.interactiveGroup.add(htmlMesh);
+        }
+
+        // Store reference
+        const panel = {
+            id: elementId,
+            mesh: htmlMesh,
+            element: clonedElement,
+            position: position,
+            rotation: rotation,
+            scale: scale,
+            attachToRig: attachToRig
+        };
+        this.uiPanels.push(panel);
+
+        console.log(`VR UI panel created for '${elementId}'`);
+        return panel;
+    },
+
+    // Remove a VR UI panel
+    removeUIPanel(panelId) {
+        const panelIndex = this.uiPanels.findIndex(p => p.id === panelId);
+        if (panelIndex === -1) return;
+
+        const panel = this.uiPanels[panelIndex];
+        const parent = panel.attachToRig ? viewerState.playerRig : viewerState.scene;
+        parent.remove(panel.mesh);
+        if (this.interactiveGroup) {
+            this.interactiveGroup.remove(panel.mesh);
+        }
+        document.body.removeChild(panel.element);
+        this.uiPanels.splice(panelIndex, 1);
+
+        console.log(`VR UI panel removed for '${panelId}'`);
     },
 
     // Handle controller select start (trigger button)
@@ -659,7 +746,7 @@ export const vrManager = {
 
     // Update VR controllers each frame
     updateVRControllers() {
-        
+
         // Handle locomotion via thumbsticks
         this.handleVRThumbstickLocomotion();
 
