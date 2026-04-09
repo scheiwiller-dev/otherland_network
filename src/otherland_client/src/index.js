@@ -14,7 +14,7 @@ import { avatarState } from './avatar.js';
 import { online } from './peermesh.js';
 import { nodeSettings } from './nodeManager.js';
 import { logout } from './user.js';
-import { vrManager } from './movement.js';
+import { vrManager } from './vrui.js';
 import { setupTouchControls } from './movement.js';
 
 // Define pitch constraints to prevent camera flipping
