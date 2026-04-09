@@ -2,7 +2,6 @@ import * as THREE from 'three';
 import { XRControllerModelFactory } from 'three/examples/jsm/webxr/XRControllerModelFactory.js';
 import { XRHandModelFactory } from 'three/examples/jsm/webxr/XRHandModelFactory.js';
 import { HTMLMesh } from 'three/examples/jsm/interactive/HTMLMesh.js';
-import { InteractiveGroup } from 'three/examples/jsm/interactive/InteractiveGroup.js';
 import RAPIER from '@dimforge/rapier3d-compat';
 
 import { viewerState, sceneObjects } from './index.js';
@@ -46,7 +45,6 @@ export const vrManager = {
 
     // VR UI Panels
     uiPanels: [],             // Array of active UI panels
-    interactiveGroup: null,   // InteractiveGroup for VR UI interaction
 
     // Initialize VR Controllers
     initVRControllers() {
@@ -73,10 +71,6 @@ export const vrManager = {
             
             // Eye height offset (local to rig; adjust to match avatar height)
             xrCamera.position.y = 1.6;
-
-            // Create InteractiveGroup for VR UI interaction
-            this.interactiveGroup = new InteractiveGroup(viewerState.renderer, viewerState.scene);
-            viewerState.scene.add(this.interactiveGroup);
 
             // Create VR UI panel for the main menu
             this.createUIPanel('main-menu', new THREE.Vector3(0, 1.5, -1), new THREE.Euler(-Math.PI / 6, 0, 0), 0.5);
@@ -137,9 +131,13 @@ export const vrManager = {
                 this.handleControllerSqueezeEnd(i, event);
             });
 
-            // Add interactive group event listeners for UI interaction
-            controller.addEventListener('selectstart', () => this.interactiveGroup?.handlePointerDown(controller));
-            controller.addEventListener('selectend', () => this.interactiveGroup?.handlePointerUp(controller));
+            // Add VR UI interaction event listeners
+            controller.addEventListener('selectstart', (event) => {
+                this.handleVRUIInteraction(controller, 'selectstart');
+            });
+            controller.addEventListener('selectend', (event) => {
+                this.handleVRUIInteraction(controller, 'selectend');
+            });
 
             // Add connected/disconnected listeners
             controller.addEventListener('connected', (event) => {
@@ -218,11 +216,6 @@ export const vrManager = {
         const parent = attachToRig ? viewerState.playerRig : viewerState.scene;
         parent.add(htmlMesh);
 
-        // Add to interactive group for VR interaction
-        if (this.interactiveGroup) {
-            this.interactiveGroup.add(htmlMesh);
-        }
-
         // Store reference
         const panel = {
             id: elementId,
@@ -247,9 +240,6 @@ export const vrManager = {
         const panel = this.uiPanels[panelIndex];
         const parent = panel.attachToRig ? viewerState.playerRig : viewerState.scene;
         parent.remove(panel.mesh);
-        if (this.interactiveGroup) {
-            this.interactiveGroup.remove(panel.mesh);
-        }
         document.body.removeChild(panel.element);
         this.uiPanels.splice(panelIndex, 1);
 
@@ -338,6 +328,45 @@ export const vrManager = {
     handleControllerSqueezeEnd(controllerIndex, event) {
         console.log(`Controller ${controllerIndex} squeeze end`);
         // Could be used for releasing grabbed objects
+    },
+
+    // Handle VR UI interactions using raycasting
+    handleVRUIInteraction(controller, eventType) {
+        if (!controller) return;
+
+        // Create a raycaster from the controller
+        const raycaster = new THREE.Raycaster();
+        raycaster.setFromXRController(controller);
+
+        // Check for intersections with UI panels
+        const uiMeshes = this.uiPanels.map(panel => panel.mesh);
+        const intersects = raycaster.intersectObjects(uiMeshes, true);
+
+        if (intersects.length > 0) {
+            const intersectedMesh = intersects[0].object;
+            const panel = this.uiPanels.find(p => p.mesh === intersectedMesh || intersectedMesh.parent === p.mesh);
+
+            if (panel && panel.element) {
+                // Convert 3D intersection point to 2D UV coordinates for HTML interaction
+                const uv = intersects[0].uv;
+                if (uv) {
+                    const rect = panel.element.getBoundingClientRect();
+                    const x = uv.x * rect.width;
+                    const y = (1 - uv.y) * rect.height; // Flip Y coordinate
+
+                    // Create and dispatch appropriate DOM events
+                    const event = new MouseEvent(eventType === 'selectstart' ? 'mousedown' : 'mouseup', {
+                        clientX: x,
+                        clientY: y,
+                        button: 0,
+                        bubbles: true
+                    });
+
+                    panel.element.dispatchEvent(event);
+                    console.log(`VR UI interaction: ${eventType} at (${x.toFixed(1)}, ${y.toFixed(1)}) on ${panel.id}`);
+                }
+            }
+        }
     },
 
     // Update VR controllers each frame
