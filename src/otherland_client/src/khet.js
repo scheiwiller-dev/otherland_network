@@ -679,28 +679,29 @@ export async function loadKhet(khetId, { sceneObjects, animationMixers, khetStat
                     // Scale Object
                     object.scale.set(khet.scale[0], khet.scale[1], khet.scale[2]);
 
+                    // Compute bounding box
+                    const box = new THREE.Box3().setFromObject(object);
+                    const size = box.getSize(new THREE.Vector3());
+                    const center = box.getCenter(new THREE.Vector3());
+                    const minY = box.min.y; // Lowest point on Y-axis
+
                     // Add to playerRig if avatar (for locomotion), else scene
                     const isAvatarKhet = khet.khetType === 'Avatar';
                     if (isAvatarKhet && viewerState.playerRig) {
+                        // Center the avatar mesh at the rig origin
+                        object.position.set(-center.x, -center.y, -center.z);
                         viewerState.playerRig.add(object);
-                        object.position.set(0, 0, 0); // Local position relative to rig; physics will drive rig
                         console.log(`Avatar ${khetId} added to playerRig`);
                     } else {
                         viewerState.scene.add(object);
                     }
                     sceneObjects.push(object);
 
-                    // Compute bounding box and adjust origin
-                    const box = new THREE.Box3().setFromObject(object);
-                    const size = box.getSize(new THREE.Vector3());
-                    const center = box.getCenter(new THREE.Vector3());
-                    const minY = box.min.y; // Lowest point on Y-axis
-
                     // Adjust object/rig position so bottom is at khet.position[1]
                     if (isAvatarKhet && viewerState.playerRig) {
                         viewerState.playerRig.position.set(
                             khet.position[0], 
-                            khet.position[1], 
+                            khet.position[1] + size.y / 2,  // Center at bottom + half height
                             khet.position[2]
                         );
                     } else {
