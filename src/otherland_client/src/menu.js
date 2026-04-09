@@ -13,6 +13,7 @@ import { animator } from './animation.js'
 import { isTouchDevice } from './movement.js';
 import { updateFriendsList, handleInvitation } from './friends.js'
 import { loadLibraryObjects, deleteLibraryObject, generateObjectId, readFileAsDataURL } from './library.js'
+import { vrManager } from './vrui.js'
 
 // Declare Variables
 const startScreen = document.getElementById('start-screen');
@@ -114,6 +115,11 @@ document.addEventListener('keydown', event => {
     // Handle ESC key seperatly
     if (key === 'escape') {
         escButtonPress();
+    }
+
+    // Handle VR debug key (V key)
+    if (key === 'v') {
+        vrManager.debugControllerState();
     }
 });
 

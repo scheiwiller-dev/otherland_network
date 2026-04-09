@@ -22,6 +22,28 @@ export const vrManager = {
     previousTriggerValues: [0, 0], // For detecting full press edge on analog trigger
     lastDebugTime: 0,             // Throttled debug for VR controller state
 
+    // Vive 2.0 Controller Interface
+    controllerState: {
+        left: {
+            connected: false,
+            trigger: { value: 0, pressed: false },
+            grip: { pressed: false },
+            touchpad: { touched: false, pressed: false, x: 0, y: 0 },
+            thumbstick: { x: 0, y: 0, pressed: false },
+            menu: { pressed: false },
+            system: { pressed: false }
+        },
+        right: {
+            connected: false,
+            trigger: { value: 0, pressed: false },
+            grip: { pressed: false },
+            touchpad: { touched: false, pressed: false, x: 0, y: 0 },
+            thumbstick: { x: 0, y: 0, pressed: false },
+            menu: { pressed: false },
+            system: { pressed: false }
+        }
+    },
+
     // VR UI Panels
     uiPanels: [],             // Array of active UI panels
     interactiveGroup: null,   // InteractiveGroup for VR UI interaction
@@ -234,11 +256,11 @@ export const vrManager = {
         console.log(`VR UI panel removed for '${panelId}'`);
     },
 
-    // Handle controller select start (trigger button)
+    // Handle controller select start (trigger button) - only left controller for teleport
     handleControllerSelectStart(controllerIndex, event) {
         console.log(`Controller ${controllerIndex} select button pressed`);
         const controller = this.controllers[controllerIndex];
-        if (!controller) return;
+        if (!controller || controller.inputSource?.handedness !== 'left') return;
 
         this.teleportAimActive = true;
         this.isTeleporting = true;
@@ -256,9 +278,12 @@ export const vrManager = {
         }
     },
 
-    // Handle controller select end (trigger release)
+    // Handle controller select end (trigger release) - only left controller for teleport
     handleControllerSelectEnd(controllerIndex, event) {
         console.log(`Controller ${controllerIndex} select button released`);
+        const controller = this.controllers[controllerIndex];
+        if (!controller || controller.inputSource?.handedness !== 'left') return;
+
         if (this.teleportAimActive && this.pendingTeleportPosition) {
             this.performTeleport();
         } else {
@@ -318,106 +343,210 @@ export const vrManager = {
     // Update VR controllers each frame
     updateVRControllers() {
 
-        // Handle locomotion via thumbsticks
+        // Update controller state from gamepad inputs
+        this.updateControllerState();
+
+        // Handle locomotion via thumbsticks (left controller only)
         this.handleVRThumbstickLocomotion();
 
         // Throttled debug to diagnose controller/gamepad/analog input (every 500ms)
         const now = Date.now();
         if (now - (this.lastDebugTime || 0) > 500) {
             console.log(`[VR-DEBUG] updateVRControllers - #controllers=${this.controllers.length}, presenting=${!!(viewerState.renderer.xr && viewerState.renderer.xr.isPresenting)}`);
-            for (let j = 0; j < this.controllers.length; j++) {
-                const c = this.controllers[j];
-                const gp = c.inputSource?.gamepad;
-                console.log(`[VR-DEBUG] C${j}: visible=${!!c.visible}, input=${!!c.inputSource}, gamepad=${!!gp}, buttons=${gp?.buttons?.length || 0}, trigger=${gp ? (gp.buttons[0]?.value||0).toFixed(2) : 'N/A'}`);
-            }
+            console.log(`[VR-DEBUG] Left controller: connected=${this.controllerState.left.connected}, trigger=${this.controllerState.left.trigger.value.toFixed(2)}, grip=${this.controllerState.left.grip.pressed}`);
+            console.log(`[VR-DEBUG] Right controller: connected=${this.controllerState.right.connected}, trigger=${this.controllerState.right.trigger.value.toFixed(2)}, grip=${this.controllerState.right.grip.pressed}`);
             this.lastDebugTime = now;
         }
 
-        // Update teleport preview if actively aiming (uses events for start/end, loop for live update)
+        // Update teleport preview if actively aiming (uses left controller only)
         if (this.teleportAimActive && this.teleportMarker) {
-            for (let i = 0; i < this.controllers.length; i++) {
-                const controller = this.controllers[i];
-                if (controller) {
-                    this.teleportRaycaster.setFromXRController(controller);
-                    const intersects = this.teleportRaycaster.intersectObjects(sceneObjects, true);
+            const leftController = this.controllers.find(c => c.inputSource?.handedness === 'left');
+            if (leftController) {
+                this.teleportRaycaster.setFromXRController(leftController);
+                const intersects = this.teleportRaycaster.intersectObjects(sceneObjects, true);
 
-                    if (intersects.length > 0) {
-                        const intersection = intersects[0];
-                        this.teleportMarker.position.copy(intersection.point);
-                        this.teleportMarker.position.y += 0.02;
-                        this.pendingTeleportPosition = intersection.point.clone();
-                        break; // Update from first valid controller
-                    }
+                if (intersects.length > 0) {
+                    const intersection = intersects[0];
+                    this.teleportMarker.position.copy(intersection.point);
+                    this.teleportMarker.position.y += 0.02;
+                    this.pendingTeleportPosition = intersection.point.clone();
                 }
             }
         }
     },
 
-    // Handle VR thumbstick locomotion
+    // Update Vive 2.0 controller state
+    updateControllerState() {
+        for (let i = 0; i < this.controllers.length; i++) {
+            const controller = this.controllers[i];
+            if (!controller || !controller.inputSource?.gamepad) continue;
+
+            const gamepad = controller.inputSource.gamepad;
+            const handedness = controller.inputSource.handedness; // 'left' or 'right'
+            const state = handedness === 'left' ? this.controllerState.left : this.controllerState.right;
+
+            if (!state) continue;
+
+            state.connected = true;
+
+            // Vive 2.0 button mapping (based on WebXR Gamepad API)
+            // Button indices for Vive controllers:
+            // 0: trigger (analog)
+            // 1: grip
+            // 2: touchpad (touch)
+            // 3: thumbstick (press)
+            // 4: menu button
+            // 5: system button (usually not accessible)
+
+            if (gamepad.buttons.length >= 6) {
+                // Trigger (analog value and pressed state)
+                state.trigger.value = gamepad.buttons[0].value || 0;
+                state.trigger.pressed = gamepad.buttons[0].pressed || false;
+
+                // Grip button
+                state.grip.pressed = gamepad.buttons[1].pressed || false;
+
+                // Touchpad (touch and press)
+                state.touchpad.touched = gamepad.buttons[2].touched || false;
+                state.touchpad.pressed = gamepad.buttons[2].pressed || false;
+
+                // Menu button
+                state.menu.pressed = gamepad.buttons[4].pressed || false;
+
+                // System button (if available)
+                state.system.pressed = gamepad.buttons[5]?.pressed || false;
+            }
+
+            // Thumbstick axes (typically axes 0 and 1 for X/Y)
+            if (gamepad.axes.length >= 2) {
+                state.thumbstick.x = gamepad.axes[0] || 0;
+                state.thumbstick.y = gamepad.axes[1] || 0;
+            }
+
+            // Touchpad position (for Vive controllers, touchpad position is usually axes 2 and 3)
+            if (gamepad.axes.length >= 4) {
+                state.touchpad.x = gamepad.axes[2] || 0;
+                state.touchpad.y = gamepad.axes[3] || 0;
+            }
+
+            // Thumbstick press (button 3)
+            if (gamepad.buttons.length >= 4) {
+                state.thumbstick.pressed = gamepad.buttons[3].pressed || false;
+            }
+        }
+    },
+
+    // Get controller state for a specific hand
+    getControllerState(hand) {
+        return this.controllerState[hand] || null;
+    },
+
+    // Check if a button was just pressed (edge detection)
+    isButtonJustPressed(hand, button, previousState) {
+        const currentState = this.getControllerState(hand);
+        if (!currentState) return false;
+
+        const currentPressed = currentState[button]?.pressed || false;
+        const previouslyPressed = previousState?.[button]?.pressed || false;
+
+        return currentPressed && !previouslyPressed;
+    },
+
+    // Check if a button was just released (edge detection)
+    isButtonJustReleased(hand, button, previousState) {
+        const currentState = this.getControllerState(hand);
+        if (!currentState) return false;
+
+        const currentPressed = currentState[button]?.pressed || false;
+        const previouslyPressed = previousState?.[button]?.pressed || false;
+
+        return !currentPressed && previouslyPressed;
+    },
+
+    // Handle VR thumbstick locomotion (now limited to left controller)
     handleVRThumbstickLocomotion() {
         if (!avatarState.avatarBody || !avatarState.isGrounded || !viewerState.playerRig) {
             return;
         }
 
-        // Use the first available controller's thumbstick for locomotion
-        for (let i = 0; i < this.controllers.length; i++) {
-            const controller = this.controllers[i];
-            if (controller && controller.inputSource?.gamepad) {
-                const gamepad = controller.inputSource.gamepad;
-                if (gamepad.axes.length >= 2) {
-                    const thumbstickX = gamepad.axes[0]; // Left/right
-                    const thumbstickY = gamepad.axes[1]; // Forward/backward
-
-                    // Apply deadzone
-                    const deadzone = 0.1;
-                    const magnitude = Math.sqrt(thumbstickX * thumbstickX + thumbstickY * thumbstickY);
-                    if (magnitude < deadzone) {
-                        continue; // Skip if thumbstick is in deadzone
-                    }
-
-                    console.log(`Controller ${i} thumbstick: x=${thumbstickX.toFixed(2)}, y=${thumbstickY.toFixed(2)}`);
-
-                    // Get camera direction for movement relative to view
-                    const camDirection = new THREE.Vector3();
-                    viewerState.renderer.xr.getCamera().getWorldDirection(camDirection);
-                    camDirection.y = 0;
-                    camDirection.normalize();
-
-                    // Calculate movement direction
-                    const right = new THREE.Vector3().crossVectors(camDirection, new THREE.Vector3(0, 1, 0));
-                    const movementDirection = new THREE.Vector3()
-                        .addScaledVector(camDirection, -thumbstickY) // Forward/backward
-                        .addScaledVector(right, thumbstickX); // Left/right
-
-                    movementDirection.normalize();
-
-                    // Apply movement
-                    const speed = 2.0; // VR locomotion speed
-                    const delta = 1/60; // Assume 60fps for now
-                    const desiredMovement = movementDirection.clone().multiplyScalar(speed * delta);
-
-                    // Use character controller for collision-aware movement
-                    const collider = avatarState.avatarBody.collider(0);
-                    viewerState.characterController.computeColliderMovement(
-                        collider,
-                        new RAPIER.Vector3(desiredMovement.x, 0, desiredMovement.z)
-                    );
-
-                    const correctedMovement = viewerState.characterController.computedMovement();
-                    const newPosition = avatarState.avatarBody.translation();
-                    newPosition.x += correctedMovement.x;
-                    newPosition.z += correctedMovement.z;
-                    avatarState.avatarBody.setTranslation(newPosition, true);
-                    avatarState.avatarBody.wakeUp();
-
-                    // Sync playerRig position with avatar body for proper mesh movement and first-person view
-                    viewerState.playerRig.position.x = newPosition.x;
-                    viewerState.playerRig.position.z = newPosition.z;
-
-                    console.log(`VR locomotion applied: dx=${correctedMovement.x.toFixed(3)}, dz=${correctedMovement.z.toFixed(3)}`);
-                    break; // Use only the first controller with input
-                }
-            }
+        // Only use left controller for movement
+        const leftControllerState = this.getControllerState('left');
+        if (!leftControllerState || !leftControllerState.connected) {
+            return;
         }
+
+        const thumbstickX = leftControllerState.thumbstick.x;
+        const thumbstickY = leftControllerState.thumbstick.y;
+
+        // Apply deadzone
+        const deadzone = 0.1;
+        const magnitude = Math.sqrt(thumbstickX * thumbstickX + thumbstickY * thumbstickY);
+        if (magnitude < deadzone) {
+            return; // Skip if thumbstick is in deadzone
+        }
+
+        console.log(`Left controller thumbstick: x=${thumbstickX.toFixed(2)}, y=${thumbstickY.toFixed(2)}`);
+
+        // Get camera direction for movement relative to view
+        const camDirection = new THREE.Vector3();
+        viewerState.renderer.xr.getCamera().getWorldDirection(camDirection);
+        camDirection.y = 0;
+        camDirection.normalize();
+
+        // Calculate movement direction
+        const right = new THREE.Vector3().crossVectors(camDirection, new THREE.Vector3(0, 1, 0));
+        const movementDirection = new THREE.Vector3()
+            .addScaledVector(camDirection, -thumbstickY) // Forward/backward
+            .addScaledVector(right, thumbstickX); // Left/right
+
+        movementDirection.normalize();
+
+        // Apply movement
+        const speed = 2.0; // VR locomotion speed
+        const delta = 1/60; // Assume 60fps for now
+        const desiredMovement = movementDirection.clone().multiplyScalar(speed * delta);
+
+        // Use character controller for collision-aware movement
+        const collider = avatarState.avatarBody.collider(0);
+        viewerState.characterController.computeColliderMovement(
+            collider,
+            new RAPIER.Vector3(desiredMovement.x, 0, desiredMovement.z)
+        );
+
+        const correctedMovement = viewerState.characterController.computedMovement();
+        const newPosition = avatarState.avatarBody.translation();
+        newPosition.x += correctedMovement.x;
+        newPosition.z += correctedMovement.z;
+        avatarState.avatarBody.setTranslation(newPosition, true);
+        avatarState.avatarBody.wakeUp();
+
+        // Sync playerRig position with avatar body for proper mesh movement and first-person view
+        viewerState.playerRig.position.x = newPosition.x;
+        viewerState.playerRig.position.z = newPosition.z;
+
+        console.log(`VR locomotion applied: dx=${correctedMovement.x.toFixed(3)}, dz=${correctedMovement.z.toFixed(3)}`);
+    },
+
+    // Debug method to log current controller state
+    debugControllerState() {
+        console.log('=== VR Controller State ===');
+        console.log('Left Controller:');
+        console.log(`  Connected: ${this.controllerState.left.connected}`);
+        console.log(`  Trigger: value=${this.controllerState.left.trigger.value.toFixed(2)}, pressed=${this.controllerState.left.trigger.pressed}`);
+        console.log(`  Grip: pressed=${this.controllerState.left.grip.pressed}`);
+        console.log(`  Touchpad: touched=${this.controllerState.left.touchpad.touched}, pressed=${this.controllerState.left.touchpad.pressed}, x=${this.controllerState.left.touchpad.x.toFixed(2)}, y=${this.controllerState.left.touchpad.y.toFixed(2)}`);
+        console.log(`  Thumbstick: x=${this.controllerState.left.thumbstick.x.toFixed(2)}, y=${this.controllerState.left.thumbstick.y.toFixed(2)}, pressed=${this.controllerState.left.thumbstick.pressed}`);
+        console.log(`  Menu: pressed=${this.controllerState.left.menu.pressed}`);
+        console.log(`  System: pressed=${this.controllerState.left.system.pressed}`);
+
+        console.log('Right Controller:');
+        console.log(`  Connected: ${this.controllerState.right.connected}`);
+        console.log(`  Trigger: value=${this.controllerState.right.trigger.value.toFixed(2)}, pressed=${this.controllerState.right.trigger.pressed}`);
+        console.log(`  Grip: pressed=${this.controllerState.right.grip.pressed}`);
+        console.log(`  Touchpad: touched=${this.controllerState.right.touchpad.touched}, pressed=${this.controllerState.right.touchpad.pressed}, x=${this.controllerState.right.touchpad.x.toFixed(2)}, y=${this.controllerState.right.touchpad.y.toFixed(2)}`);
+        console.log(`  Thumbstick: x=${this.controllerState.right.thumbstick.x.toFixed(2)}, y=${this.controllerState.right.thumbstick.y.toFixed(2)}, pressed=${this.controllerState.right.thumbstick.pressed}`);
+        console.log(`  Menu: pressed=${this.controllerState.right.menu.pressed}`);
+        console.log(`  System: pressed=${this.controllerState.right.system.pressed}`);
+        console.log('===========================');
     }
 };
