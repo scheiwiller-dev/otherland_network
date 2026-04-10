@@ -16,7 +16,7 @@
     "src/otherland_client"
   ],
   "devDependencies": {
-    "vite": "^8.0.3",
+    "vite": "^8.0.5",
     "esprima": "^4.0.1",
     "npm-check-updates": "^20.0.0"
   },
