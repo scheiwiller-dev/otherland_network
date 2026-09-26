@@ -25,18 +25,14 @@ jobs:
       - name: install mops packages and toolchain
         run: |
           mops install
-          mops toolchain init
           mops toolchain use moc 1.14.0
+          echo "DFX_MOC_PATH=$(mops toolchain bin moc)" >> "$GITHUB_ENV"
 
       - name: install client dependencies
         run: npm install
 
       - name: Download binaries
-        env:
-          DFX_MOC_PATH: moc-wrapper
         run: dfx build --check
 
       - name: run tests
-        env:
-          DFX_MOC_PATH: moc-wrapper
         run: dfx cache show && mops test

@@ -53,13 +53,11 @@ https://internetcomputer.org/docs/building-apps/getting-started/install
 - `npm run mops:setup`  (installs Motoko 1.14 via mops; required for `mo:core` 2.6)
 - Copy `.env.example` to `.env` (dfx will fill canister IDs on deploy)
 - `dfx start --background --clean`
-- Prefer `npm run deploy` (sets `DFX_MOC_PATH=moc-wrapper`). Plain `dfx deploy` only works after `mops toolchain init` and a new shell.
+- Prefer `npm run deploy` (sets `DFX_MOC_PATH` to the moc pinned in `mops.toml`). Plain `dfx deploy` uses dfx 0.31's bundled moc 1.1, which cannot compile `mo:core` 2.6.
 
 If you see `actorOfPrincipal does not exist` while building Motoko, dfx is using its bundled moc 1.1 instead of the mops toolchain. Fix with:
 ```bash
 npm run mops:setup
-# reopen the terminal, or:
-export DFX_MOC_PATH=moc-wrapper
 npm run deploy
 ```
 
