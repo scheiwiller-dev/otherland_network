@@ -54,6 +54,7 @@ https://internetcomputer.org/docs/building-apps/getting-started/install
 - Copy `.env.example` to `.env` (dfx will fill canister IDs on deploy)
 - `dfx start --background --clean`
 - Prefer `npm run deploy` (sets `DFX_MOC_PATH` to the moc pinned in `mops.toml`). Plain `dfx deploy` uses dfx 0.31's bundled moc 1.1, which cannot compile `mo:core` 2.6.
+- If deploy prints `Pinned moc is not executable: moc-wrapper`, remove `export DFX_MOC_PATH=moc-wrapper` from `~/.bashrc` (or the current shell). That value came from `mops toolchain init`, which mops 3 removed. `npm run deploy` resolves the compiler from `mops toolchain bin moc` instead.
 
 If you see `actorOfPrincipal does not exist` while building Motoko, dfx is using its bundled moc 1.1 instead of the mops toolchain. Fix with:
 ```bash
