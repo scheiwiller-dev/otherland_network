@@ -22,12 +22,14 @@ jobs:
 
       - uses: dfinity/setup-mops@main
 
-      - name: install mops packages
-        run: mops install
+      - name: install mops packages and toolchain
+        run: |
+          mops install
+          mops toolchain use moc 1.14.0
+          echo "DFX_MOC_PATH=$(mops toolchain bin moc)" >> "$GITHUB_ENV"
 
       - name: install client dependencies
         run: npm install
-        working-directory: src/otherland_client
 
       - name: Download binaries
         run: dfx build --check

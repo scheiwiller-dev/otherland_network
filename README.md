@@ -49,15 +49,24 @@ https://internetcomputer.org/docs/building-apps/getting-started/install
 - Install VS Code (start in WSL mode!)
 - Install nvm, node.js, npm, mops, dfx
 - Clone Git Repo
-- 'dfx start --background --clean'
-- 'dfx deploy'
+- `npm install`
+- `npm run mops:setup`  (installs Motoko 1.14 via mops; required for `mo:core` 2.6)
+- Copy `.env.example` to `.env` (dfx will fill canister IDs on deploy)
+- `dfx start --background --clean`
+- Prefer `npm run deploy` (sets `DFX_MOC_PATH` to the moc pinned in `mops.toml`). Plain `dfx deploy` uses dfx 0.31's bundled moc 1.1, which cannot compile `mo:core` 2.6.
+
+If you see `actorOfPrincipal does not exist` while building Motoko, dfx is using its bundled moc 1.1 instead of the mops toolchain. Fix with:
+```bash
+npm run mops:setup
+npm run deploy
+```
 
 `Reset Network`
 
 'dfx stop' (or 'dfx --killall' if needed)
 'rm -rf .dfx' (if internet identity anchors fail)
 'dfx start --background --clean'
-'dfx deploy'
+'npm run deploy'
 
 `Participate`
 
