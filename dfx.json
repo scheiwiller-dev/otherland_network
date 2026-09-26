@@ -29,14 +29,27 @@
     },
     "internet_identity": {
       "type": "custom",
+      "specified_id": "rdmx6-jaaaa-aaaaa-aaadq-cai",
       "candid": "https://github.com/dfinity/internet-identity/releases/download/release-2026-08-11/internet_identity.did",
       "wasm": "https://github.com/dfinity/internet-identity/releases/download/release-2026-08-11/internet_identity_dev.wasm.gz",
-      "frontend": {},
       "remote": {
         "id": {
           "ic": "rdmx6-jaaaa-aaaaa-aaadq-cai"
         }
       }
+    },
+    "internet_identity_frontend": {
+      "type": "custom",
+      "specified_id": "uqzsh-gqaaa-aaaaq-qaada-cai",
+      "candid": "https://raw.githubusercontent.com/dfinity/internet-identity/release-2026-08-11/src/internet_identity_frontend/internet_identity_frontend.did",
+      "wasm": "https://github.com/dfinity/internet-identity/releases/download/release-2026-08-11/internet_identity_frontend.wasm.gz",
+      "init_arg": "(record { backend_canister_id = principal \"rdmx6-jaaaa-aaaaa-aaadq-cai\"; backend_origin = \"http://rdmx6-jaaaa-aaaaa-aaadq-cai.localhost:4943\"; related_origins = opt vec { \"http://uqzsh-gqaaa-aaaaq-qaada-cai.localhost:4943\" }; fetch_root_key = opt true; dev_csp = opt true })",
+      "remote": {
+        "id": {
+          "ic": "uqzsh-gqaaa-aaaaq-qaada-cai"
+        }
+      },
+      "frontend": {}
     }
   },
   "defaults": {
