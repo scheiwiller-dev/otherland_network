@@ -12,6 +12,7 @@ import {
 import { nodeSettings, getCardinalActor, getUserNodeActor } from '../nodeManager.js';
 import { user } from '../user.js';
 import { showTab } from './tabs.js';
+import { lookupPersonLabel, renderPerson } from '../principalLabel.js';
 
 async function updateNodeSettings() {
     const nodeSettingsBtn = document.getElementById('node-settings-btn');
@@ -219,28 +220,28 @@ export function initNodeAssets() {
                 const allowedUsers = await actor.getAllowedUsers();
                 const allowedList = document.getElementById('allowed-users-list');
                 allowedList.innerHTML = '';
-                allowedUsers.forEach(principal => {
-                    if (principal.toText() !== user.getUserPrincipal()) {
-                        const li = document.createElement('li');
-                        li.textContent = principal.toText();
-                        const removeBtn = document.createElement('button');
-                        removeBtn.textContent = 'Remove';
-                        removeBtn.addEventListener('click', async () => {
-                            await commitNodeAccessChange(() => actor.removeAllowed(principal));
-                        });
-                        li.appendChild(removeBtn);
-                        allowedList.appendChild(li);
-                    }
-                });
+                for (const principal of allowedUsers) {
+                    if (principal.toText() === user.getUserPrincipal()) continue;
+                    const li = document.createElement('li');
+                    renderPerson(li, await lookupPersonLabel(actor, principal));
+                    const removeBtn = document.createElement('button');
+                    removeBtn.textContent = 'Remove';
+                    removeBtn.addEventListener('click', async () => {
+                        await commitNodeAccessChange(() => actor.removeAllowed(principal));
+                    });
+                    li.appendChild(removeBtn);
+                    allowedList.appendChild(li);
+                }
                 const friends = await actor.getFriends();
                 const friendsDropdown = document.getElementById('friends-dropdown');
                 friendsDropdown.innerHTML = '<option value="">Select a friend</option>';
-                friends.forEach(friend => {
+                for (const friend of friends) {
+                    const label = await lookupPersonLabel(actor, friend);
                     const option = document.createElement('option');
                     option.value = friend.toText();
-                    option.textContent = friend.toText();
+                    option.textContent = label.primary;
                     friendsDropdown.appendChild(option);
-                });
+                }
             }
         });
     }

@@ -125,7 +125,6 @@
                     <h2>Friend List</h2>
                     <button id="add-friend-btn">Add Friend</button>
                     <button id="invitationLinkBtn">Generate Invite Link</button>
-                    <button id="generateInviteBtn">Invite Link</button>
                 </div>
                 <div id="add-friend-row" class="hidden">
                     <input type="text" id="friend-identifier-input" placeholder="Enter username or principal">
@@ -134,8 +133,10 @@
                 </div>
                 <div id="friends-info">
                     <div id="pending-requests"></div>
+                    <div id="outgoing-invites"></div>
                     <div id="friends-list"></div>
                     <p id="invitation-link"></p>
+                    <button id="copy-invitation-btn" class="hidden" type="button">Copy link</button>
                 </div>
 
                 <!-- Peer to Peer -->

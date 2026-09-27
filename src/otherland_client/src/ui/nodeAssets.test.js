@@ -151,8 +151,10 @@ describe('node settings access', () => {
     }
 
     function removeButton() {
-        const row = elements['allowed-users-list'].children.find((li) => li.textContent === friendId);
-        return row.children[0];
+        const row = elements['allowed-users-list'].children.find((li) =>
+            li.children.some((child) => child.textContent === 'Remove')
+        );
+        return row.children.find((child) => child.textContent === 'Remove');
     }
 
     async function reloadsAfter(run) {
