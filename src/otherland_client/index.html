@@ -43,6 +43,7 @@
                 <button id="library-btn">Library</button>
                 <button id="wallet-btn">Wallet</button>
                 <button id="settings-btn">Settings</button>
+                <button id="admin-btn" class="hidden">Admin</button>
             </div>
         </div>
         <div id="tab-content">
@@ -268,6 +269,14 @@
             <div id="settings-tab" class="tab future-update">
                 <h1>Settings</h1>
                 <input type="file" id="wasm-file-input" accept=".wasm" />
+            </div>
+
+            <!-- Admin -->
+            <div id="admin-tab" class="tab">
+                <h1>Admin</h1>
+                <p>Cardinal cycles</p>
+                <p id="cardinal-cycles-balance">—</p>
+                <button id="refresh-cardinal-cycles-btn" type="button">Refresh</button>
             </div>
         </div>
     </div>

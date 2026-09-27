@@ -2,6 +2,7 @@ import { refreshNodeList } from '../nodeManager.js';
 import { updateFriendsList } from '../friends.js';
 import { updateProfileDisplay } from '../user.js';
 import { loadLibraryObjects } from '../library.js';
+import { refreshCardinalCycles } from './adminPanel.js';
 
 const tabs = document.querySelectorAll('.tab');
 
@@ -21,6 +22,9 @@ export function showTab(tabId) {
             break;
         case 'library-tab':
             loadLibraryObjects();
+            break;
+        case 'admin-tab':
+            refreshCardinalCycles();
             break;
     }
 }

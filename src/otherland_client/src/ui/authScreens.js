@@ -3,6 +3,7 @@ import { updateFriendsList, handleInvitation } from '../friends.js';
 import { getUserNodeActor } from '../nodeManager.js';
 import { online } from '../peermesh.js';
 import { showTab } from './tabs.js';
+import { refreshAdminAccess } from './adminPanel.js';
 
 const startScreen = document.getElementById('start-screen');
 const mainMenu = document.getElementById('main-menu');
@@ -16,6 +17,7 @@ export function showLoggedInUI() {
     updateAccountSwitcher(false);
     showTab('otherland-tab');
     updateFriendsList();
+    refreshAdminAccess();
     online.openPeer();
 }
 

@@ -62,6 +62,27 @@ npm run deploy
 
 `npm run deploy` builds the Motoko canisters, generates the JavaScript bindings, builds the frontend, and installs everything. Open the `otherland_client` URL printed at the end (`http://otherland_client.local.localhost:8000`). Login uses `http://id.ai.localhost:8000`.
 
+`First admin`
+
+Cardinal has no admin until someone claims it. On first boot it generates one setup token and writes it to the controller-only log:
+
+```bash
+icp canister logs cardinal
+```
+
+Log in with Internet Identity. The app shows your principal (also listed under Profile → Identity, and printed in the browser console as `Logged in with principal:`) and asks for that token. The first logged-in principal that submits it becomes admin. The token is then deleted. `icp identity principal` is the deployer identity, not this Internet Identity principal.
+
+`Cycles`
+
+Creating a user node draws cycles from Cardinal and is refused while Cardinal holds less than 2.5T. The local network seeds the deployer identity with cycles. Move some of that balance onto Cardinal:
+
+```bash
+icp cycles balance
+icp canister top-up cardinal --amount 20T
+```
+
+`icp canister status cardinal` prints the canister balance afterward. Repeat the top-up whenever creating another node reports that Cardinal is short on cycles.
+
 For a Vite dev server on port 3000, fill `ICP_CLI_CID_*` in `.env` from `icp canister list`, then:
 
 ```bash

@@ -39,6 +39,7 @@ service : {
   addAllowedUser: (nodeId: principal, user: principal) -> (Result);
   addFriend: (friend: principal) -> ();
   blockUser: (user: principal, block: bool) -> ();
+  callerIsAdmin: () -> (bool) query;
   cancelInvitation: (token: text) -> (Result);
   claimAdmin: (token: text) -> (Result);
   declineFriendRequest: (from: principal) -> (Result);
@@ -56,6 +57,7 @@ service : {
                                     });
   getAllowedUsers: () -> (vec principal) query;
   getCanisterId: (user: principal) -> (opt principal) query;
+  getCyclesBalance: () -> (opt nat) query;
   getFriends: () -> (vec principal) query;
   getNodeStatus: (user: principal) -> (opt NodeStatus);
   getNodeVisibility: () -> (opt bool) query;

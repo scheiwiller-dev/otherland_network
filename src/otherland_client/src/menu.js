@@ -16,6 +16,7 @@ import { initGameMenu, escButtonPress, userIsInWorld, enterViewer, leaveViewer }
 import { initVrSession } from './ui/vrSession.js';
 import { initLibraryUpload } from './ui/libraryUpload.js';
 import { initAdminWasm } from './ui/adminWasm.js';
+import { initAdminPanel } from './ui/adminPanel.js';
 
 export { keys };
 export { escButtonPress, userIsInWorld, enterViewer, leaveViewer };
@@ -40,6 +41,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     initVrSession();
     initLibraryUpload();
     initAdminWasm();
+    initAdminPanel();
 
     await initAuthScreens();
 

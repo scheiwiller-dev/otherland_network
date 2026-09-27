@@ -192,6 +192,15 @@ persistent actor Cardinal {
     _adminIsSet
   };
 
+  public query({ caller }) func callerIsAdmin() : async Bool {
+    isAdmin(caller)
+  };
+
+  public query({ caller }) func getCyclesBalance() : async ?Nat {
+    if (not isAdmin(caller)) return null;
+    ?Cycles.balance()
+  };
+
   public shared({ caller }) func claimAdmin(token : Text) : async Result.Result<(), Text> {
     if (caller == Principal.fromText("2vxsx-fae")) {
       return #err("Log in with Internet Identity before claiming admin");
@@ -635,7 +644,7 @@ persistent actor Cardinal {
 
         // Guard against cardinal running out of cycles
         if (Cycles.balance() < 2_500_000_000_000) {
-          return #err("Cardinal canister has insufficient cycles. Top it up with: icp cycles transfer 5T <cardinal-canister-id>");
+          return #err("Cardinal canister has insufficient cycles. Top it up with: icp canister top-up cardinal --amount 20T");
         };
 
         Debug.print("=== requestCanister start - balance: " # Nat.toText(Cycles.balance()));

@@ -22,6 +22,8 @@ export async function claimAdminIfNeeded() {
         return false;
     }
     window.alert('This Internet Identity is now the Cardinal admin.');
+    const { refreshAdminAccess } = await import('./adminPanel.js');
+    await refreshAdminAccess();
     return true;
 }
 
