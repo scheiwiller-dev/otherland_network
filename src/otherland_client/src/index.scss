@@ -67,8 +67,15 @@ $font-family: 'Orbitron', Arial, sans-serif;
 .hidden {
   display: none;
 }
-#main-menu #side-bar button.future-update {
+#main-menu #side-bar button.future-update,
+#main-menu #side-bar button.future-update:disabled,
+#main-menu #side-bar button.future-update:hover,
+#main-menu #node-config-btn.future-update,
+#main-menu #node-config-btn.future-update:disabled,
+#main-menu #node-config-btn.future-update:hover {
   color: $background-semi;
+  pointer-events: none;
+  transform: none;
 }
 body {
   margin: 0;
@@ -308,6 +315,11 @@ canvas {
         #node-settings-btn {
           display: none;
         }
+      }
+      #node-request-error {
+        color: #ff6b6b;
+        margin: 0;
+        min-height: 0;
       }
       #treehouse-buttons {
         display: flex;

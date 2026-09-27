@@ -165,10 +165,11 @@ export async function getAccessibleCanisters() {
         }));
 
         // Update UI: Show/hide the "request-new-canister" button
-        if (!ownCanister) {
-            document.getElementById("request-new-canister").style.display = "block";
-        } else {
-            document.getElementById("request-new-canister").style.display = "none";
+        const identity = getIdentity();
+        const anonymous = !identity || identity.getPrincipal().isAnonymous();
+        const createBtn = document.getElementById("request-new-canister");
+        if (createBtn) {
+            createBtn.style.display = (!anonymous && !ownCanister) ? "block" : "none";
         }
 
         return accessibleList;
@@ -279,6 +280,11 @@ async function syncUsernameForNode(canisterId) {
 }
 
 // Request new canister creation by Cardinal
+function showNodeRequestError(message) {
+    const el = document.getElementById('node-request-error');
+    if (el) el.textContent = message || '';
+}
+
 export async function requestNewCanister() {
     try {
         // Get Cardinal Actor
@@ -293,6 +299,7 @@ export async function requestNewCanister() {
             const createdId = userCanisterId.toText();
             localStorage.setItem('userCanisterId', createdId);
             console.log(`User Canister ID: ${userCanisterId}`);
+            showNodeRequestError('');
             await syncUsernameForNode(createdId);
             return userCanisterId;
         } else {
@@ -300,6 +307,8 @@ export async function requestNewCanister() {
         }
     } catch (error) {
         console.error('Error requesting canister:', error);
+        const message = error && error.message ? error.message : String(error);
+        showNodeRequestError(message);
     }
 }
 
