@@ -230,12 +230,19 @@ canvas {
     left: 280px;
     top: 0;
     height: 100%;
-    width: 100%;
+    width: calc(100% - 280px);
     overflow: hidden;
-    min-width: 665px;
+    min-width: 0;
+    box-sizing: border-box;
     background: $background-semi;
     padding: 100px 40px;
     color: $secondary-color;
+
+    .principal-id,
+    #principal-display,
+    #node-table td:first-child {
+      overflow-wrap: anywhere;
+    }
 
     h2 {
       color: $primary-color;
@@ -303,6 +310,7 @@ canvas {
       }
       #node-buttons {
         display: flex;
+        flex-wrap: wrap;
         #request-new-canister {
           display: none;
         }
@@ -323,6 +331,7 @@ canvas {
       }
       #treehouse-buttons {
         display: flex;
+        flex-wrap: wrap;
         #peer-info {
           display: none;
         }
@@ -563,8 +572,8 @@ canvas {
       border: 1px solid $primary-color;
       margin-top: 15px;
       margin-bottom: 16px;
-      width: min(760px, calc(100vw - 360px));
-      max-width: calc(100vw - 360px);
+      width: 100%;
+      max-width: 100%;
       box-sizing: border-box;
 
       button {
@@ -812,7 +821,7 @@ canvas {
     #crosshairs {
       position: fixed;
       top: calc(50vh - 10px);
-      left: calc(50vb - 10px);
+      left: calc(50vw - 10px);
     }
   }
 
@@ -942,9 +951,19 @@ canvas {
 // Responsive Design
 @media (max-width: 1000px) {
   #main-menu {
+    flex-direction: column;
+    overflow: hidden;
+
     #side-bar {
+      position: relative;
+      width: 100%;
+      height: auto;
+      flex: 0 0 auto;
+      box-sizing: border-box;
+      border-right: none;
+      border-bottom: 2.1px $primary-color solid;
       padding: 20px;
-      overflow-y: scroll;
+      overflow-y: auto;
 
       button {
         margin: 10px 0;
@@ -952,9 +971,18 @@ canvas {
     }
 
     #tab-content {
-      left: 240px;
+      position: relative;
+      left: 0;
+      top: 0;
+      width: 100%;
+      min-width: 0;
+      height: auto;
+      flex: 1 1 auto;
+      min-height: 0;
+      box-sizing: border-box;
       padding: 20px;
-      overflow-y: scroll;
+      overflow-x: hidden;
+      overflow-y: auto;
 
       button {
         margin: 10px 10px 10px 0;
@@ -988,8 +1016,8 @@ canvas {
 
       #khet-editor {
         position: static;
-        width: min(760px, calc(100vw - 280px));
-        max-width: calc(100vw - 280px);
+        width: 100%;
+        max-width: 100%;
         margin-bottom: 40px;
       }
     }

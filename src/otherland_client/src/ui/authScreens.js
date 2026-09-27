@@ -14,7 +14,7 @@ const continueGuestBtn = document.getElementById('continue-guest-btn');
 /** Show main menu after a successful login / username setup. */
 export function showLoggedInUI() {
     document.getElementById('start-screen').style.display = 'none';
-    document.getElementById('main-menu').style.display = 'block';
+    document.getElementById('main-menu').style.display = 'flex';
     updateAccountSwitcher(false);
     showTab('otherland-tab');
     updateFriendsList();
@@ -105,7 +105,7 @@ export async function initAuthScreens() {
     if (continueGuestBtn) {
         continueGuestBtn.addEventListener('click', () => {
             startScreen.style.display = 'none';
-            mainMenu.style.display = 'block';
+            mainMenu.style.display = 'flex';
             updateAccountSwitcher(true);
             showTab('otherland-tab');
         });

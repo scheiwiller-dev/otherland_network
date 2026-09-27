@@ -219,6 +219,7 @@ export async function refreshNodeList() {
             // NodeID column
             const tdId = document.createElement('td');
             tdId.textContent = node.canisterId;
+            tdId.className = 'principal-id';
             tr.appendChild(tdId);
 
             // Owner column
