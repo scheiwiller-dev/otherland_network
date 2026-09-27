@@ -5,26 +5,40 @@ import { user, authReady, getIdentity, logout } from './user.js';
 import { khetController, updateKhetTable } from './khet.js';
 import { online } from './peermesh.js'
 import { CANISTER_IDS } from './canisterIds.js';
-import { agentHost, isLocalNetwork } from './network.js';
+import { httpAgentOptions } from './network.js';
 
 let cardinalAgentInstance = null;
 let cardinalActor = null;
 let cardinalAgentPrincipal = null;
+let cardinalAgentReady = null;
 
 let userNodeAgentInstance = null;
 let userNodeActor = null;
 let userNodeAgentPrincipal = null;
 let userNodeActorCanisterId = null;
+let userNodeAgentReady = null;
 
 /** Drop cached agents/actors so the next get*Actor() rebuilds with current identity/node. */
 export function invalidateActors() {
     cardinalAgentInstance = null;
     cardinalActor = null;
     cardinalAgentPrincipal = null;
+    cardinalAgentReady = null;
     userNodeAgentInstance = null;
     userNodeActor = null;
     userNodeAgentPrincipal = null;
     userNodeActorCanisterId = null;
+    userNodeAgentReady = null;
+}
+
+async function createAgent(identity) {
+    const options = httpAgentOptions(identity);
+    const agent = new HttpAgent(options);
+    if (options.shouldFetchRootKey) {
+        await agent.fetchRootKey();
+        console.log('Root key fetched successfully');
+    }
+    return agent;
 }
 
 function currentPrincipalText() {
@@ -41,23 +55,21 @@ export async function getCardinalActor() {
         invalidateActors();
     }
 
-    // Create HTTP Agent with Internet Identity
-    if (!cardinalAgentInstance) {
-        cardinalAgentInstance = new HttpAgent({
-            host: agentHost(),
-            identity: getIdentity()
-        });
+    // Create the agent once, and make concurrent callers wait until its root key is ready.
+    if (!cardinalAgentReady) {
+        const identity = getIdentity();
         cardinalAgentPrincipal = principalText;
-
-        if (isLocalNetwork()) {
-            try {
-                await cardinalAgentInstance.fetchRootKey();
-                console.log('Root key fetched successfully');
-            } catch (err) {
-                console.error('Unable to fetch root key:', err);
-                throw err;
-            }
-        }
+        cardinalAgentReady = createAgent(identity).then(agent => {
+            cardinalAgentInstance = agent;
+            return agent;
+        }).catch(err => {
+            cardinalAgentReady = null;
+            cardinalAgentPrincipal = null;
+            throw err;
+        });
+    }
+    if (!cardinalAgentInstance) {
+        await cardinalAgentReady;
     }
 
     // Create actor for the cardinal canister
@@ -83,32 +95,32 @@ export async function getUserNodeActor() {
 
     const principalText = currentPrincipalText();
     if (
-        userNodeAgentInstance &&
+        userNodeAgentReady &&
         (userNodeAgentPrincipal !== principalText || userNodeActorCanisterId !== nodeSettings.nodeId)
     ) {
         userNodeAgentInstance = null;
         userNodeActor = null;
         userNodeAgentPrincipal = null;
         userNodeActorCanisterId = null;
+        userNodeAgentReady = null;
     }
 
-    if (!userNodeAgentInstance) {
-        userNodeAgentInstance = new HttpAgent({
-            host: agentHost(),
-            identity: getIdentity()
-        });
+    if (!userNodeAgentReady) {
+        const identity = getIdentity();
+        const nodeId = nodeSettings.nodeId;
         userNodeAgentPrincipal = principalText;
-
-        if (isLocalNetwork()) {
-            try {
-                await userNodeAgentInstance.fetchRootKey();
-                console.log('Root key fetched successfully');
-            } catch (err) {
-                console.error('Unable to fetch root key:', err);
-                throw err;
-            }
-        }
+        userNodeActorCanisterId = nodeId;
+        userNodeAgentReady = createAgent(identity).then(agent => {
+            userNodeAgentInstance = agent;
+            return agent;
+        }).catch(err => {
+            userNodeAgentReady = null;
+            userNodeAgentPrincipal = null;
+            userNodeActorCanisterId = null;
+            throw err;
+        });
     }
+    await userNodeAgentReady;
 
     if (!userNodeActor || userNodeActorCanisterId !== nodeSettings.nodeId) {
         userNodeActor = Actor.createActor(userNodeIdlFactory, {
@@ -162,10 +174,9 @@ export async function getAccessibleCanisters() {
     } catch (error) {
         console.error('Error getting accessible canisters:', error);
         // Check if it's a certificate verification error, which can happen if the local replica root key changed
-        if (error.message && (error.message.includes('TrustError') || error.message.includes('Certificate verification'))) {
+        if (error.message && (error.message.includes('TrustError') || error.message.includes('Certificate verification')) && !getIdentity()?.getPrincipal().isAnonymous()) {
             console.warn('Certificate verification failed, likely due to changed root key. Logging out to force re-authentication.');
             await logout();
-            // Optionally, reload the page or show a message
             window.location.reload();
         }
         return [];

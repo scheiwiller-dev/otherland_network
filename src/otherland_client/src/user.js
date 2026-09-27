@@ -70,6 +70,9 @@ export async function login() {
         invalidateActors();
         console.log("Logged in with principal:", user.getUserPrincipal());
 
+        const { claimAdminIfNeeded } = await import('./ui/adminWasm.js');
+        await claimAdminIfNeeded();
+
         try {
             const { getAccessibleCanisters, nodeSettings } = await import('./nodeManager.js');
             await getAccessibleCanisters();

@@ -5,6 +5,14 @@ import { user } from './user.js';
 
 // Function to update and display the friends list and pending requests
 export async function updateFriendsList() {
+    try {
+        await loadFriendsList();
+    } catch (error) {
+        console.error('Failed to load friends list:', error);
+    }
+}
+
+async function loadFriendsList() {
     const actor = await getCardinalActor();
     if (!actor) {
         console.error("Not connected to Cardinal canister");

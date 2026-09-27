@@ -2,6 +2,8 @@ canisters:
   - name: cardinal
     recipe:
       type: "@dfinity/motoko@v5.1.0"
+    settings:
+      log_visibility: controllers
   - name: user_node
     recipe:
       type: "@dfinity/motoko@v5.1.0"

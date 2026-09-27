@@ -10,6 +10,14 @@ import { enterViewer } from './gameMenu.js';
 export async function enterWorld() {
     animator.stop();
 
+    if (viewerState.ready) {
+        await viewerState.ready;
+    }
+    if (!viewerState.scene || !viewerState.controls) {
+        console.error('3D viewer is not ready');
+        return;
+    }
+
     const params = { scene: viewerState.scene, world: viewerState.world, sceneObjects, animationMixers, khetState };
     await worldController.loadScene(params, nodeSettings);
 

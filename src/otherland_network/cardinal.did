@@ -40,6 +40,7 @@ service : {
   addFriend: (friend: principal) -> ();
   blockUser: (user: principal, block: bool) -> ();
   cancelInvitation: (token: text) -> (Result);
+  claimAdmin: (token: text) -> (Result);
   declineFriendRequest: (from: principal) -> (Result);
   generateFriendInvitation: () -> (text);
   getAccessibleCanisters: () ->
@@ -64,6 +65,7 @@ service : {
                                       Invitation;
                                     }) query;
   getUsername: (user: principal) -> (opt text) query;
+  isAdminConfigured: () -> (bool) query;
   isBlocked: (user: principal) -> (bool) query;
   isFriendWith: (userA: principal, userB: principal) -> (bool) query;
   isUsernameTaken: (name: text) -> (bool) query;

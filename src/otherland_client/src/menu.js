@@ -31,7 +31,9 @@ initProfile();
 initGameMenu();
 
 document.addEventListener('DOMContentLoaded', async () => {
-    viewerState.init();
+    viewerState.ready = viewerState.init().catch((error) => {
+        console.error('Failed to initialize the 3D viewer:', error);
+    });
 
     initTreehouseControls();
     initNodeAssets();
