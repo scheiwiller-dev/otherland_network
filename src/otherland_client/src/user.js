@@ -186,9 +186,29 @@ export async function abortUsernameSetup() {
     }
 }
 
+function accountMark(isGuest) {
+    if (isGuest) return 'G';
+    const name = (user.getUserName() || '').trim();
+    return (name[0] || 'A').toUpperCase();
+}
+
 // Unified account switcher - handles Guest and II-logged-in states with action buttons
 export function updateAccountSwitcher(isGuest = false) {
-    document.getElementById("info-box").style.display = 'block';
+    const infoBox = document.getElementById("info-box");
+    infoBox.style.display = 'block';
+    let icon = document.getElementById('account-icon');
+    if (!icon) {
+        icon = document.createElement('button');
+        icon.id = 'account-icon';
+        icon.type = 'button';
+        icon.setAttribute('aria-label', 'Account');
+        icon.addEventListener('click', () => {
+            infoBox.classList.toggle('account-open');
+        });
+        infoBox.insertBefore(icon, infoBox.firstChild);
+    }
+    icon.textContent = accountMark(isGuest);
+
     const accountSwitcher = document.getElementById('account-switcher');
     accountSwitcher.innerHTML = '';
 
@@ -202,7 +222,8 @@ export function updateAccountSwitcher(isGuest = false) {
         container.appendChild(status);
 
         const loginBtn = document.createElement('button');
-        loginBtn.textContent = 'Login with\nInternet Identity';
+        loginBtn.textContent = 'Log in';
+        loginBtn.title = 'Login with Internet Identity';
         loginBtn.style.marginTop = '8px';
         loginBtn.addEventListener('click', async () => {
             const { login } = await import('./user.js');

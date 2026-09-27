@@ -57,6 +57,7 @@ persistent actor Cardinal {
   var blockedUsersEntries : [(Principal, ())] = [];
   var auditLogEntries : [Types.AuditLogEntry] = [];
   var usernameEntries : [(Text, Principal)] = [];
+  var nodeTitleEntries : [(Principal, Text)] = [];
 
   // In-memory HashMaps reconstructed from stable data
   transient var registry = Map.fromIter<Principal, Principal>(
@@ -95,6 +96,9 @@ persistent actor Cardinal {
   transient var usernames = Map.fromIter<Text, Principal>(
     usernameEntries.vals(), Text.compare
   );
+  transient var nodeTitles = Map.fromIter<Principal, Text>(
+    nodeTitleEntries.vals(), principalCompare
+  );
   
   // Upgrade hooks to save and restore HashMap data
   system func preupgrade() {
@@ -118,6 +122,7 @@ persistent actor Cardinal {
     );
     auditLogEntries := auditLog;
     usernameEntries := Iter.toArray(usernames.entries());
+    nodeTitleEntries := Iter.toArray(nodeTitles.entries());
   };
 
   system func postupgrade() {
@@ -158,6 +163,10 @@ persistent actor Cardinal {
     usernames := Map.fromIter<Text, Principal>(
       usernameEntries.vals(),
       Text.compare
+    );
+    nodeTitles := Map.fromIter<Principal, Text>(
+      nodeTitleEntries.vals(),
+      principalCompare
     );
   };
 
@@ -536,6 +545,28 @@ persistent actor Cardinal {
     nodeVisibility.get(principalCompare, caller);
   };
 
+  // Owner-chosen label for the caller's node. Empty text clears it.
+  public shared({ caller }) func setNodeTitle(title : Text) : async Result.Result<(), Text> {
+    switch (registry.get(principalCompare, caller)) {
+      case null { #err("No node for this account") };
+      case (?_canisterId) {
+        if (title == "") {
+          nodeTitles.remove(principalCompare, caller);
+          #ok(())
+        } else if (Text.size(title) > 48) {
+          #err("Title must be 48 characters or fewer")
+        } else {
+          nodeTitles.add(principalCompare, caller, title);
+          #ok(())
+        }
+      };
+    }
+  };
+
+  public query({ caller }) func getNodeTitle() : async ?Text {
+    nodeTitles.get(principalCompare, caller);
+  };
+
   // Get Allowed Users
   public query({ caller }) func getAllowedUsers() : async [Principal] {
     switch (accessControl.get(principalCompare, caller)) {
@@ -617,6 +648,7 @@ persistent actor Cardinal {
           username;
           isPublic;
           cycles;
+          title = nodeTitles.get(principalCompare, owner);
         });
       }
     };

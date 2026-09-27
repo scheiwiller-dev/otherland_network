@@ -9,7 +9,7 @@ import {
     editFormSnapshot,
     clearCurrentEditingKhetId,
 } from '../khet.js';
-import { nodeSettings, getCardinalActor, getUserNodeActor } from '../nodeManager.js';
+import { nodeSettings, getCardinalActor, getUserNodeActor, refreshNodeList } from '../nodeManager.js';
 import { user } from '../user.js';
 import { showTab } from './tabs.js';
 import { lookupPersonLabel, renderPerson } from '../principalLabel.js';
@@ -214,6 +214,13 @@ export function initNodeAssets() {
             if (nodeSettings.nodeType == 2) {
                 showTab('node-settings-tab');
                 const actor = await getCardinalActor();
+                const titleInput = document.getElementById('node-title-input');
+                const titleError = document.getElementById('node-title-error');
+                if (titleError) titleError.textContent = '';
+                if (titleInput && actor.getNodeTitle) {
+                    const current = await actor.getNodeTitle();
+                    titleInput.value = Array.isArray(current) && current.length ? String(current[0]) : '';
+                }
                 const visibility = await actor.getNodeVisibility();
                 const isPublic = visibility.length > 0 ? visibility[0] : false;
                 document.getElementById('public-toggle').checked = isPublic;
@@ -242,6 +249,28 @@ export function initNodeAssets() {
                     option.textContent = label.primary;
                     friendsDropdown.appendChild(option);
                 }
+            }
+        });
+    }
+
+    const saveTitleBtn = document.getElementById('save-node-title-btn');
+    if (saveTitleBtn) {
+        saveTitleBtn.addEventListener('click', async () => {
+            const input = document.getElementById('node-title-input');
+            const error = document.getElementById('node-title-error');
+            if (!input || nodeSettings.nodeType != 2) return;
+            if (error) error.textContent = '';
+            const title = input.value.trim();
+            try {
+                const actor = await getCardinalActor();
+                const message = canisterErrorText(await actor.setNodeTitle(title));
+                if (message) {
+                    if (error) error.textContent = message;
+                    return;
+                }
+                await refreshNodeList();
+            } catch (err) {
+                if (error) error.textContent = err && err.message ? err.message : String(err);
             }
         });
     }

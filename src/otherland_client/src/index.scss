@@ -67,14 +67,57 @@ $font-family: 'Orbitron', Arial, sans-serif;
 .hidden {
   display: none;
 }
+
+#locked-feature-modal {
+  @include flex-center;
+  position: fixed;
+  inset: 0;
+  z-index: 1100;
+  background: $background-semi;
+
+  &.hidden {
+    display: none;
+  }
+
+  #locked-feature-card {
+    background: $background-dark;
+    color: $secondary-color;
+    width: min(420px, calc(100vw - 32px));
+    padding: 28px 24px;
+    border-radius: 12px;
+    border: 1px solid $primary-color;
+    box-shadow: 0 0 30px rgba($primary-color, 0.3);
+    text-align: center;
+    box-sizing: border-box;
+
+    h2 {
+      color: $primary-color;
+      font-size: 28px;
+      margin: 0 0 12px;
+    }
+
+    p {
+      margin: 0 0 20px;
+      line-height: 1.5;
+    }
+
+    button {
+      @include button-style;
+    }
+  }
+}
+
+#node-title-error {
+  color: #ff6b6b;
+  margin: 8px 0 0;
+  min-height: 1.2em;
+}
 #main-menu #side-bar button.future-update,
-#main-menu #side-bar button.future-update:disabled,
 #main-menu #side-bar button.future-update:hover,
 #main-menu #node-config-btn.future-update,
-#main-menu #node-config-btn.future-update:disabled,
 #main-menu #node-config-btn.future-update:hover {
-  color: $background-semi;
-  pointer-events: none;
+  color: #9aa3ad;
+  box-shadow: none;
   transform: none;
 }
 body {
@@ -761,14 +804,14 @@ canvas {
   position: fixed;
     background: $background-dark;
     color: $secondary-color;
-    padding: 15px;
-    border-radius: 10px;
+    padding: 8px 10px;
+    border-radius: 8px;
     border: 1px solid $primary-color;
     box-shadow: 0 0 10px rgba($primary-color, 0.2);
-    max-width: 210px;
+    max-width: 168px;
 
   div {
-    margin-top: 15px;
+    margin-top: 8px;
   }
 
   div:first-child {
@@ -776,10 +819,18 @@ canvas {
   }
   
   // Account Switcher
+  #account-icon {
+    display: none;
+  }
+
   #account-switcher {
   
     button {
       @include button-style;
+      width: 100%;
+      box-sizing: border-box;
+      padding: 6px 8px;
+      font-size: 13px;
     }
   }
 
@@ -951,6 +1002,8 @@ canvas {
 // Responsive Design
 @media (max-width: 1000px) {
   #main-menu {
+    top: 48px;
+    height: calc(100vh - 48px);
     flex-direction: column;
     overflow: hidden;
 
@@ -1057,19 +1110,56 @@ canvas {
   }
 
   #info-box {
-    top: 5px;
-    right: 5px;
+    top: 0;
+    right: 0;
+    left: 0;
+    max-width: none;
+    height: 48px;
+    padding: 0 8px;
+    border-radius: 0;
+    border-top: none;
+    border-left: none;
+    border-right: none;
+    box-sizing: border-box;
+    overflow: visible;
 
-    #account-switcher {
+    #account-icon {
+      display: block;
+      position: absolute;
+      top: 6px;
+      right: 8px;
+      width: 36px;
+      height: 36px;
+      margin: 0;
+      padding: 0;
+      font-size: 14px;
+      line-height: 34px;
+      text-align: center;
+      color: $primary-color;
+      background: $background-dark;
+      border: 1px solid $primary-color;
+      border-radius: 8px;
+      box-shadow: none;
+    }
+
+    #account-switcher,
+    #node-state {
       display: none;
     }
 
-    div {
-      margin: 0;
-    }
+    &.account-open {
+      height: auto;
+      padding-bottom: 8px;
 
-    #node-state {
-      width: 155px;
+      #account-switcher {
+        display: block;
+        margin-top: 48px;
+      }
+
+      #node-state {
+        display: block;
+        width: auto;
+      }
     }
   }
 

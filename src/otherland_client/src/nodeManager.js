@@ -7,6 +7,7 @@ import { khetController, updateKhetTable } from './khet.js';
 import { online } from './peermesh.js'
 import { CANISTER_IDS } from './canisterIds.js';
 import { httpAgentOptions } from './network.js';
+import { nodeHeading, ownerLine } from './nodeListLabel.js';
 
 let cardinalAgentInstance = null;
 let cardinalActor = null;
@@ -161,7 +162,8 @@ export async function getAccessibleCanisters() {
             owner: details.owner.toText(),
             isPublic: details.isPublic,
             username: details.username,
-            cycles: details.cycles
+            cycles: details.cycles,
+            title: Array.isArray(details.title) && details.title.length ? String(details.title[0]) : '',
         }));
 
         // Update UI: Show/hide the "request-new-canister" button
@@ -216,15 +218,14 @@ export async function refreshNodeList() {
                 tr.style.color = "#00d4ff";
             }
 
-            // NodeID column
             const tdId = document.createElement('td');
-            tdId.textContent = node.canisterId;
-            tdId.className = 'principal-id';
+            const heading = nodeHeading(node);
+            tdId.textContent = heading;
+            if (heading === node.canisterId) tdId.className = 'principal-id';
             tr.appendChild(tdId);
 
-            // Owner column
             const tdOwner = document.createElement('td');
-            tdOwner.textContent = node.username + (node.isPublic ? " (Public)" : " (Private)");
+            tdOwner.textContent = ownerLine(node);
             tr.appendChild(tdOwner);
 
             // Cycles column

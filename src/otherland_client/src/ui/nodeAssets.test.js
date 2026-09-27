@@ -31,6 +31,7 @@ vi.mock('../nodeManager.js', () => ({
     nodeSettings: { nodeId: 'aaaaa-aa', nodeType: 2, localKhets: {}, saveLocalKhets: vi.fn() },
     getCardinalActor: vi.fn(),
     getUserNodeActor: vi.fn(),
+    refreshNodeList: vi.fn(),
 }));
 
 vi.mock('../user.js', () => ({
@@ -40,7 +41,7 @@ vi.mock('../user.js', () => ({
 vi.mock('./tabs.js', () => ({ showTab: vi.fn() }));
 
 import { initNodeAssets } from './nodeAssets.js';
-import { getCardinalActor, getUserNodeActor, nodeSettings } from '../nodeManager.js';
+import { getCardinalActor, getUserNodeActor, nodeSettings, refreshNodeList } from '../nodeManager.js';
 import * as khetApi from '../khet.js';
 
 function createElement(tag) {
@@ -104,6 +105,9 @@ function installDom() {
         'scale-x',
         'scale-y',
         'scale-z',
+        'node-title-input',
+        'node-title-error',
+        'save-node-title-btn',
     ];
     for (const id of ids) {
         const element = createElement(id === 'allowed-users-list' ? 'ul' : 'div');
@@ -140,6 +144,8 @@ describe('node settings access', () => {
             getNodeVisibility: vi.fn(async () => [isPublic]),
             getAllowedUsers: vi.fn(async () => [Principal.fromText(userId), friendPrincipal]),
             getFriends: vi.fn(async () => [friendPrincipal]),
+            getNodeTitle: vi.fn(async () => ['Dock']),
+            setNodeTitle: vi.fn(async () => ({ ok: null })),
         };
         getCardinalActor.mockReset();
         getCardinalActor.mockResolvedValue(actor);
@@ -261,6 +267,32 @@ describe('node settings access', () => {
         expect(globalThis.alert).toHaveBeenCalledWith('Error: network down');
         expect(elements['public-toggle'].checked).toBe(false);
         expect(reloads).toBe(0);
+    });
+
+    it('loads the saved title and writes a trimmed title', async () => {
+        await openSettings();
+        expect(elements['node-title-input'].value).toBe('Dock');
+
+        elements['node-title-input'].value = '  North dock  ';
+        refreshNodeList.mockClear();
+        await elements['save-node-title-btn'].click();
+        await flush();
+
+        expect(actor.setNodeTitle).toHaveBeenCalledWith('North dock');
+        expect(refreshNodeList).toHaveBeenCalled();
+        expect(elements['node-title-error'].textContent).toBe('');
+    });
+
+    it('shows setNodeTitle #err in the settings form', async () => {
+        actor.setNodeTitle.mockResolvedValue({ err: 'No node for this account' });
+        elements['node-title-input'].value = 'Dock';
+        refreshNodeList.mockClear();
+
+        await elements['save-node-title-btn'].click();
+        await flush();
+
+        expect(elements['node-title-error'].textContent).toBe('No node for this account');
+        expect(refreshNodeList).not.toHaveBeenCalled();
     });
 
     it('saves own-node pose with updateKhetMetadata and shows #err', async () => {
