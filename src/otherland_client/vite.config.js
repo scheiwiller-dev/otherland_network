@@ -1,5 +1,4 @@
 import { defineConfig } from 'vite';
-import { fileURLToPath, URL } from 'url';
 import environment from 'vite-plugin-environment';
 import dotenv from 'dotenv';
 import { viteStaticCopy } from 'vite-plugin-static-copy';
@@ -24,15 +23,14 @@ export default defineConfig({
   server: {
     // proxy: {
     //  "/api": {
-    //    target: "http://127.0.0.1:4943",
+    //    target: "http://127.0.0.1:8000",
     //    changeOrigin: true,
     //  },
     //},
   },
   publicDir: "assets",
   plugins: [
-    environment("all", { prefix: "CANISTER_" }),
-    environment("all", { prefix: "DFX_" }),
+    environment("all", { prefix: "ICP_" }),
     viteStaticCopy({
       targets: [
         {
@@ -43,20 +41,12 @@ export default defineConfig({
     })
   ],
   define: {
-    'process.env.USER_NODE_CANISTER_ID': JSON.stringify(process.env.USER_NODE_CANISTER_ID || process.env.CANISTER_ID_USER_NODE),
-    'process.env.CARDINAL_CANISTER_ID':   JSON.stringify(process.env.CARDINAL_CANISTER_ID   || process.env.CANISTER_ID_CARDINAL),
-    'process.env.INTERNET_IDENTITY_CANISTER_ID': JSON.stringify(process.env.INTERNET_IDENTITY_CANISTER_ID || process.env.CANISTER_ID_INTERNET_IDENTITY),
-    'process.env.OTHERLAND_CLIENT_CANISTER_ID': JSON.stringify(process.env.OTHERLAND_CLIENT_CANISTER_ID || process.env.CANISTER_ID_OTHERLAND_CLIENT),
+    'process.env.ICP_CLI_NETWORK': JSON.stringify(process.env.ICP_CLI_NETWORK || 'local'),
+    'process.env.ICP_CLI_CID_USER_NODE': JSON.stringify(process.env.ICP_CLI_CID_USER_NODE || ''),
+    'process.env.ICP_CLI_CID_CARDINAL': JSON.stringify(process.env.ICP_CLI_CID_CARDINAL || ''),
+    'process.env.ICP_CLI_CID_OTHERLAND_CLIENT': JSON.stringify(process.env.ICP_CLI_CID_OTHERLAND_CLIENT || ''),
   },
   resolve: {
-    alias: [
-      {
-        find: "declarations",
-        replacement: fileURLToPath(
-          new URL("../declarations", import.meta.url)
-        ),
-      },
-    ],
     dedupe: ['@icp-sdk/core'],
   },
 });

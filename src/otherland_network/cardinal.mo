@@ -573,7 +573,7 @@ persistent actor Cardinal {
 
         // Guard against cardinal running out of cycles
         if (Cycles.balance() < 2_500_000_000_000) {
-          return #err("Cardinal canister has insufficient cycles. Top it up with: dfx ledger fabricate-cycles --all");
+          return #err("Cardinal canister has insufficient cycles. Top it up with: icp cycles transfer 5T <cardinal-canister-id>");
         };
 
         Debug.print("=== requestCanister start - balance: " # Nat.toText(Cycles.balance()));

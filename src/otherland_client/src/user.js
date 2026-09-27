@@ -1,7 +1,7 @@
 import { AuthClient } from "@icp-sdk/auth/client";
 import { AnonymousIdentity } from "@icp-sdk/core/agent";
 import { getUserNodeActor, invalidateActors } from './nodeManager.js';
-import { CANISTER_IDS } from './canisterIds.js';
+import { identityProvider } from './network.js';
 import { updateFriendsList, handleInvitation } from './friends.js';
 import { showLoggedInUI } from './menu.js';
 
@@ -35,8 +35,8 @@ export const user = {
 // Initialize the authentication client
 export async function initAuth() {
     try {
-        authClient = await AuthClient.create();
-        if (await authClient.isAuthenticated()) {
+        authClient = new AuthClient({ identityProvider: identityProvider() });
+        if (authClient.isAuthenticated()) {
             identity = await authClient.getIdentity();
             user.setUserPrincipal(identity.getPrincipal().toText());
         } else {
@@ -65,44 +65,30 @@ export function getIdentity() {
 // Trigger Internet Identity login
 export async function login() {
     try {
-        const isLocal = (process.env.DFX_NETWORK === 'local' || !process.env.DFX_NETWORK);
-        const iiProvider = isLocal
-            ? `http://${CANISTER_IDS.INTERNET_IDENTITY}.localhost:4943`
-            : 'https://identity.ic0.app';
+        identity = await authClient.signIn();
+        user.setUserPrincipal(identity.getPrincipal().toText());
+        invalidateActors();
+        console.log("Logged in with principal:", user.getUserPrincipal());
 
-        await authClient.login({
-            identityProvider: iiProvider,
-            onSuccess: async () => {
-                identity = await authClient.getIdentity();
-                user.setUserPrincipal(identity.getPrincipal().toText());
-                invalidateActors();
-                console.log("Logged in with principal:", user.getUserPrincipal());
-
-                try {
-                    const { getAccessibleCanisters, nodeSettings } = await import('./nodeManager.js');
-                    await getAccessibleCanisters();                    // populates userOwnedNodes
-                    if (nodeSettings.userOwnedNodes?.length > 0) {
-                        nodeSettings.nodeId = nodeSettings.userOwnedNodes[0];
-                        nodeSettings.nodeType = 0;
-                        nodeSettings.displayNodeConfig?.();
-                        console.log("Node initialized after II login");
-                    }
-                } catch (e) {
-                    console.warn("Could not auto-select node after login", e);
-                }
-
-                const usernameReady = await setupUsername();
-
-                if (usernameReady) {
-                    handleInvitation();
-                    showLoggedInUI();
-                }
-                // else: username screen is shown - it will handle continuation after save
-            },
-            onError: (error) => {
-                console.error("Login failed:", error);
+        try {
+            const { getAccessibleCanisters, nodeSettings } = await import('./nodeManager.js');
+            await getAccessibleCanisters();
+            if (nodeSettings.userOwnedNodes?.length > 0) {
+                nodeSettings.nodeId = nodeSettings.userOwnedNodes[0];
+                nodeSettings.nodeType = 0;
+                nodeSettings.displayNodeConfig?.();
+                console.log("Node initialized after II login");
             }
-        });
+        } catch (e) {
+            console.warn("Could not auto-select node after login", e);
+        }
+
+        const usernameReady = await setupUsername();
+
+        if (usernameReady) {
+            handleInvitation();
+            showLoggedInUI();
+        }
     } catch (error) {
         console.error("Error during login:", error);
     }
@@ -111,7 +97,7 @@ export async function login() {
 // Logout and revert to anonymous identity
 export async function logout() {
     try {
-        await authClient.logout();
+        await authClient.signOut();
         identity = new AnonymousIdentity();
         user.setUserPrincipal("");
         invalidateActors();
@@ -162,7 +148,7 @@ async function setupUsername() {
 export async function abortUsernameSetup() {
     try {
         if (authClient) {
-            await authClient.logout();
+            await authClient.signOut();
         }
         identity = new AnonymousIdentity();
         user.setUserPrincipal("");

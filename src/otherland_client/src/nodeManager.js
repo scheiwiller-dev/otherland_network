@@ -1,10 +1,11 @@
 import { Actor, HttpAgent } from '@icp-sdk/core/agent';
-import { idlFactory as cardinalIdlFactory } from '../../declarations/cardinal';
-import { idlFactory as userNodeIdlFactory } from '../../declarations/user_node';
+import { idlFactory as cardinalIdlFactory } from './bindings/cardinal/cardinal.did.js';
+import { idlFactory as userNodeIdlFactory } from './bindings/user_node/user_node.did.js';
 import { user, authReady, getIdentity, logout } from './user.js';
 import { khetController, updateKhetTable } from './khet.js';
 import { online } from './peermesh.js'
 import { CANISTER_IDS } from './canisterIds.js';
+import { agentHost, isLocalNetwork } from './network.js';
 
 let cardinalAgentInstance = null;
 let cardinalActor = null;
@@ -43,12 +44,12 @@ export async function getCardinalActor() {
     // Create HTTP Agent with Internet Identity
     if (!cardinalAgentInstance) {
         cardinalAgentInstance = new HttpAgent({
-            host: process.env.DFX_NETWORK === 'local' ? 'http://localhost:4943' : window.location.origin,
+            host: agentHost(),
             identity: getIdentity()
         });
         cardinalAgentPrincipal = principalText;
 
-        if (process.env.DFX_NETWORK === 'local') {
+        if (isLocalNetwork()) {
             try {
                 await cardinalAgentInstance.fetchRootKey();
                 console.log('Root key fetched successfully');
@@ -93,12 +94,12 @@ export async function getUserNodeActor() {
 
     if (!userNodeAgentInstance) {
         userNodeAgentInstance = new HttpAgent({
-            host: process.env.DFX_NETWORK === 'local' ? 'http://localhost:4943' : window.location.origin,
+            host: agentHost(),
             identity: getIdentity()
         });
         userNodeAgentPrincipal = principalText;
 
-        if (process.env.DFX_NETWORK === 'local') {
+        if (isLocalNetwork()) {
             try {
                 await userNodeAgentInstance.fetchRootKey();
                 console.log('Root key fetched successfully');

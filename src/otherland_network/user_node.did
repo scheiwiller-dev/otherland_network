@@ -1,0 +1,107 @@
+type Size = 
+ record {
+   float64;
+   float64;
+   float64;
+ };
+type Scale = 
+ record {
+   float64;
+   float64;
+   float64;
+ };
+type Result = 
+ variant {
+   err: text;
+   ok;
+ };
+type Position = 
+ record {
+   float64;
+   float64;
+   float64;
+ };
+type Message = 
+ record {
+   sender: text;
+   "text": text;
+   timestamp: int;
+ };
+type KhetMetadata = 
+ record {
+   animations: opt vec text;
+   code: opt text;
+   gltfDataRef: opt record {
+                      principal;
+                      text;
+                      nat;
+                    };
+   gltfDataSize: nat;
+   hash: text;
+   khetId: text;
+   khetType: text;
+   originalSize: Size;
+   position: Position;
+   scale: Scale;
+   textures: opt vec record {
+                       text;
+                       blob;
+                     };
+ };
+service : {
+  abortKhetUpload: (khetId: text) -> ();
+  acceptCycles: () -> ();
+  addReader: (reader: principal) -> ();
+  backupKhets: () -> (text);
+  clearAllKhets: () -> ();
+  clearBlobs: () -> ();
+  deleteBlob: (blobId: text) -> ();
+  deleteKhet: (khetId: text) -> ();
+  finalizeBlob: (blobId: text, totalSize: nat, totalChunks: nat) ->
+   (opt text);
+  finalizeKhetUpload: (khetId: text, blobId: text, totalChunks: nat) ->
+   (opt text);
+  getAllKhets: () -> (vec KhetMetadata) query;
+  getAllPlayerPositions: () -> (vec record {
+                                      principal;
+                                      Position;
+                                    }) query;
+  getBlobChunk: (blobId: text, chunkIndex: nat) -> (opt blob) query;
+  getBlobSize: (blobId: text) -> (opt nat) query;
+  getChatHistory: () -> (vec Message) query;
+  getCyclesBalance: () -> (nat) query;
+  getKhet: (khetId: text) -> (opt KhetMetadata) query;
+  getKhetsByType: (khetType: text, _includePrivate: bool) ->
+   (vec KhetMetadata) query;
+  getNearbyPlayers: (count: nat) -> (vec principal) query;
+  getSceneObjectKhets: () -> (vec KhetMetadata) query;
+  getSignalingMessages: () -> (vec record {
+                                     principal;
+                                     text;
+                                   }) query;
+  getStorageUsage: () -> (nat) query;
+  getUsername: () -> (opt text) query;
+  grantReadAccess: (user: principal) -> ();
+  grantWriteAccess: (user: principal) -> ();
+  init: (ownerPrincipal: principal) -> ();
+  initKhetUpload: (khetMetadata: KhetMetadata) ->
+   (variant {
+      existing: text;
+      new: text;
+    });
+  joinSession: () -> (principal);
+  leaveSession: () -> ();
+  removeKhet: (khetId: text) -> ();
+  removeReader: (reader: principal) -> ();
+  revokeReadAccess: (user: principal) -> ();
+  revokeWriteAccess: (user: principal) -> ();
+  sendChatMessage: (message: Message) -> ();
+  sendSignalingMessage: (to: principal, message: text) -> ();
+  setCardinalId: (newCardinal: principal) -> (Result);
+  setUsername: (newName: text) -> (Result);
+  storeBlobChunk: (blobId: text, chunkIndex: nat, chunkData: blob) -> ();
+  updateKhetMetadata: (khetId: text, newMetadata: KhetMetadata) -> (Result);
+  updateKhetPermission: (khetId: text, allowedReadersList: vec principal,
+   allowedWritersList: vec principal) -> (Result);
+  updatePosition: (pos: Position) -> ();
+}
