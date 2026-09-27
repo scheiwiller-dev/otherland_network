@@ -16,23 +16,12 @@ jobs:
     steps:
       - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
 
-      - uses: dfinity/setup-dfx@main
-        with:
-          dfx-version: '0.31.0'
-
       - uses: dfinity/setup-mops@main
+        with:
+          moc-version: '1.14.0'
 
-      - name: install mops packages and toolchain
-        run: |
-          mops install
-          mops toolchain use moc 1.14.0
-          echo "DFX_MOC_PATH=$(mops toolchain bin moc)" >> "$GITHUB_ENV"
-
-      - name: install client dependencies
-        run: npm install
-
-      - name: Download binaries
-        run: dfx build --check
+      - name: install mops packages and pinned moc
+        run: npm run mops:setup
 
       - name: run tests
-        run: dfx cache show && mops test
+        run: mops test
