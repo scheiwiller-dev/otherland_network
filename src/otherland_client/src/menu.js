@@ -16,7 +16,7 @@ import { initTreehouseSettings } from './ui/treehouseSettings.js';
 import { initNodeAssets } from './ui/nodeAssets.js';
 import { initGameMenu, escButtonPress, userIsInWorld, enterViewer, leaveViewer } from './ui/gameMenu.js';
 import { initVrSession } from './ui/vrSession.js';
-import { initLibraryUpload } from './ui/libraryUpload.js';
+import { initLibraryPanel } from './ui/libraryPanel.js';
 import { initAdminWasm } from './ui/adminWasm.js';
 import { initAdminPanel } from './ui/adminPanel.js';
 
@@ -43,7 +43,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     initTreehouseSettings();
     initNodeAssets();
     initVrSession();
-    initLibraryUpload();
+    initLibraryPanel();
     initAdminWasm();
     initAdminPanel();
 

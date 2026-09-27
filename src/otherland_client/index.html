@@ -241,31 +241,64 @@
             <!-- Library -->
             <div id="library-tab" class="tab">
                 <h1>Library</h1>
-                
-                <!-- Object Table -->
-                <div id="library-object-list">
-                    <table id="library-object-table">
-                        <thead>
-                            <tr>
-                                <th>Object ID</th>
-                                <th>Description</th>
-                            </tr>
-                        </thead>
-                        <tbody id="library-object-tbody">
-                            <!-- Objects will be populated here -->
-                        </tbody>
-                    </table>
+                <p id="library-lead">Your 3D resources stay in this browser. Guests and TreeHouse can use them without a network node.</p>
+
+                <div id="library-layout">
+                    <div id="library-catalogue">
+                        <h2>Your resources</h2>
+                        <p id="library-empty">No resources yet. Upload a GLB or paste a URL.</p>
+                        <div id="library-object-list" class="hidden">
+                            <table id="library-object-table">
+                                <thead>
+                                    <tr>
+                                        <th>Name</th>
+                                        <th>Source</th>
+                                        <th>Size</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="library-object-tbody"></tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <div id="library-detail">
+                        <h2>Preview</h2>
+                        <div id="library-preview-frame">
+                            <canvas id="library-preview-canvas"></canvas>
+                        </div>
+                        <p id="library-preview-message" class="library-message" role="status">Select a resource to preview it.</p>
+                        <div id="library-detail-actions" class="hidden">
+                            <input type="text" id="library-rename-input" maxlength="80" placeholder="Name" autocomplete="off">
+                            <div class="library-action-row">
+                                <button id="library-rename-btn" type="button">Rename</button>
+                                <button id="library-delete-btn" type="button">Remove</button>
+                            </div>
+                            <p id="library-detail-source"></p>
+                            <p id="library-detail-message" class="library-message" role="status"></p>
+                        </div>
+                    </div>
                 </div>
 
-                <!-- Upload Section -->
                 <div id="library-upload-section">
-                    <h3>Add Object</h3>
-                    <div class="upload-controls">
-                        <input type="file" id="library-upload-input" accept=".glb,.gltf,.obj,.fbx">
-                        <input type="text" id="library-description-input" placeholder="Description">
-                        <button id="library-upload-btn">Upload Object</button>
+                    <div class="library-add-block">
+                        <h3>Upload GLB</h3>
+                        <p class="library-hint">GLB files up to 100MB. Stored on this device.</p>
+                        <div class="upload-controls">
+                            <input type="file" id="library-upload-input" accept=".glb,model/gltf-binary">
+                            <input type="text" id="library-description-input" maxlength="80" placeholder="Name (optional)" autocomplete="off">
+                            <button id="library-upload-btn" type="button">Add file</button>
+                        </div>
                     </div>
-                    <p id="library-upload-message"></p>
+                    <div class="library-add-block">
+                        <h3>Paste URL</h3>
+                        <p class="library-hint">The link is saved even when the host blocks preview.</p>
+                        <div class="upload-controls">
+                            <input type="url" id="library-url-input" placeholder="https://example.com/model.glb" spellcheck="false" autocomplete="off">
+                            <input type="text" id="library-url-name-input" maxlength="80" placeholder="Name (optional)" autocomplete="off">
+                            <button id="library-url-btn" type="button">Add URL</button>
+                        </div>
+                    </div>
+                    <p id="library-upload-message" class="library-message" role="status"></p>
                 </div>
             </div>
 

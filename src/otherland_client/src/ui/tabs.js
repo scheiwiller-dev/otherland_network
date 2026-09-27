@@ -1,7 +1,7 @@
 import { refreshNodeList } from '../nodeManager.js';
 import { updateFriendsList } from '../friends.js';
 import { updateProfileDisplay } from '../user.js';
-import { loadLibraryObjects } from '../library.js';
+import { setLibraryActive } from './libraryPanel.js';
 import { refreshCardinalCycles } from './adminPanel.js';
 
 const tabs = document.querySelectorAll('.tab');
@@ -11,6 +11,7 @@ export function showTab(tabId) {
     tabs.forEach(tab => {
         tab.style.display = tab.id === tabId ? 'block' : 'none';
     });
+    setLibraryActive(tabId === 'library-tab');
     switch (tabId) {
         case 'otherland-tab':
             refreshNodeList();
@@ -19,9 +20,6 @@ export function showTab(tabId) {
         case 'profile-tab':
             updateProfileDisplay();
             updateFriendsList();
-            break;
-        case 'library-tab':
-            loadLibraryObjects();
             break;
         case 'admin-tab':
             refreshCardinalCycles();
