@@ -949,13 +949,16 @@ canvas {
       }
 
       #assets-tab {
-        height: auto;
-        max-height: none;
-        overflow: visible;
+        height: calc(100vh - 20px);
+        max-height: calc(100vh - 20px);
+        overflow-x: hidden;
+        overflow-y: auto;
       }
 
       #khet-list {
-        max-height: fit-content;
+        max-height: max(120px, calc(100vh - 520px));
+        height: auto;
+        overflow-y: auto;
 
         /* table tr td {
           padding-right: 10px;
