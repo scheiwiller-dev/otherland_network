@@ -8,10 +8,6 @@ export const LOCKED_FEATURES = {
         title: 'Settings',
         message: 'Settings stays locked until you sign in with Internet Identity. More options can be added after that.',
     },
-    'node-config-btn': {
-        title: 'TreeHouse settings',
-        message: 'TreeHouse settings stay locked until you sign in with Internet Identity. Access controls for a shared TreeHouse can be added after that.',
-    },
 };
 
 export function lockedFeatureCopy(id) {
