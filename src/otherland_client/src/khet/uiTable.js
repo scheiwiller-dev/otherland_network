@@ -1,18 +1,17 @@
 import { khetController } from './controller.js';
 import { setCurrentEditingKhetId } from './editingState.js';
 
-// Open / Close KhetEditor
+// The asset editor sits in normal document flow. Opening it scrolls the
+// panel into view; it is not a viewport-fixed drawer.
 export function changekhetEditorDrawer(goal) {
-    if (goal == "open") {
-        document.getElementById("khet-editor").style.bottom = "240px";
-        document.getElementById("draw-up-btn").style.display = "none";
-        document.getElementById("draw-close-btn").style.display = "block";
-    } else if (goal == "close") {
-        document.getElementById("khet-editor").style.bottom = "-20px";
-        document.getElementById("draw-up-btn").style.display = "block";
-        document.getElementById("draw-close-btn").style.display = "none";
+    const editor = document.getElementById("khet-editor");
+    if (!editor) {
+        return;
     }
-    return;
+    editor.style.bottom = "";
+    if (goal == "open") {
+        editor.scrollIntoView({ block: "nearest", inline: "nearest" });
+    }
 }
 
 // Update Khet Table
