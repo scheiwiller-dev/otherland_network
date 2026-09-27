@@ -12,6 +12,7 @@ import { initLockedFeatures } from './ui/lockedFeature.js';
 import { initAuthScreens, showLoggedInUI } from './ui/authScreens.js';
 import { initProfile } from './ui/profile.js';
 import { initTreehouseControls } from './ui/treehouseControls.js';
+import { initTreehouseSettings } from './ui/treehouseSettings.js';
 import { initNodeAssets } from './ui/nodeAssets.js';
 import { initGameMenu, escButtonPress, userIsInWorld, enterViewer, leaveViewer } from './ui/gameMenu.js';
 import { initVrSession } from './ui/vrSession.js';
@@ -39,6 +40,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
 
     initTreehouseControls();
+    initTreehouseSettings();
     initNodeAssets();
     initVrSession();
     initLibraryUpload();
