@@ -41,8 +41,9 @@
                 <button id="otherland-btn">Nodes</button>
                 <button id="profile-btn">Profile</button>
                 <button id="library-btn">Library</button>
-                <button id="wallet-btn">Wallet</button>
-                <button id="settings-btn">Settings</button>
+                <button id="wallet-btn" class="future-update" type="button">Wallet</button>
+                <button id="settings-btn" class="future-update" type="button">Settings</button>
+                <button id="admin-btn" class="hidden">Admin</button>
             </div>
         </div>
         <div id="tab-content">
@@ -53,7 +54,7 @@
                 <div id="node-list">
                     <table id="node-table">
                         <tr>
-                            <th><p>Node ID</p></th>
+                            <th><p>Node</p></th>
                             <th><p>Owner</p></th>
                             <th><p>Cycles</p></th>
                         </tr>
@@ -74,8 +75,9 @@
                     <button id="toggle-p2p-btn">Open TreeHouse</button>
                     <button id="share-th-link-btn">Invite Player</button>
                     <button id="edit-treehouse-btn">Edit Environment</button>
-                    <button id="node-config-btn">Settings</button>
+                    <button id="node-config-btn" type="button">Settings</button>
                 </div>
+                <p id="node-request-error"></p>
                 
                 <div id="quick-connect-invitation">
                     <div>
@@ -124,7 +126,6 @@
                     <h2>Friend List</h2>
                     <button id="add-friend-btn">Add Friend</button>
                     <button id="invitationLinkBtn">Generate Invite Link</button>
-                    <button id="generateInviteBtn">Invite Link</button>
                 </div>
                 <div id="add-friend-row" class="hidden">
                     <input type="text" id="friend-identifier-input" placeholder="Enter username or principal">
@@ -133,8 +134,10 @@
                 </div>
                 <div id="friends-info">
                     <div id="pending-requests"></div>
+                    <div id="outgoing-invites"></div>
                     <div id="friends-list"></div>
                     <p id="invitation-link"></p>
+                    <button id="copy-invitation-btn" class="hidden" type="button">Copy link</button>
                 </div>
 
                 <!-- Peer to Peer -->
@@ -165,8 +168,6 @@
         
                 <!-- Khet Editor -->
                 <div id="khet-editor">
-                    <div id="draw-up-btn"><button>🡩</button></div>
-                    <div id="draw-close-btn"><button>🗙</button></div>
                     <div id="upload-group">
                         <h3>Upload Object</h3>
                         <input type="file" id="upload-khet" accept=".glb" multiple>
@@ -209,9 +210,21 @@
                 </div>
             </div>
 
+            <!-- TreeHouse Settings -->
+            <div id="node-config-tab" class="tab">
+                <h1>TreeHouse settings</h1>
+                <p>These settings are for your TreeHouse.</p>
+            </div>
+
             <!-- Node Settings Tab -->
             <div id="node-settings-tab" class="tab">
                 <h1>Node Settings</h1>
+                <div id="node-title-control">
+                    <label for="node-title-input">Node title</label>
+                    <input type="text" id="node-title-input" maxlength="48" placeholder="Name this node">
+                    <button id="save-node-title-btn" type="button">Save title</button>
+                    <p id="node-title-error"></p>
+                </div>
                 <div id="visibility-control">
                     <label>Node Visibility:</label>
                     <input type="checkbox" id="public-toggle"> Public
@@ -267,7 +280,18 @@
             <!-- Settings -->
             <div id="settings-tab" class="tab future-update">
                 <h1>Settings</h1>
+            </div>
+
+            <!-- Admin -->
+            <div id="admin-tab" class="tab">
+                <h1>Admin</h1>
+                <p>Cardinal cycles</p>
+                <p id="cardinal-cycles-balance">—</p>
+                <button id="refresh-cardinal-cycles-btn" type="button">Refresh</button>
+                <h2>User node module</h2>
                 <input type="file" id="wasm-file-input" accept=".wasm" />
+                <button id="upgrade-node-btn" type="button">Upgrade my node</button>
+                <p id="wasm-admin-status"></p>
             </div>
         </div>
     </div>
@@ -299,6 +323,14 @@
             <h2>Select Avatar</h2>
             <div id="avatar-container"></div>
             <button id="back-avatar-btn">Back</button>
+        </div>
+    </div>
+
+    <div id="locked-feature-modal" class="hidden" role="dialog" aria-modal="true" aria-labelledby="locked-feature-title">
+        <div id="locked-feature-card">
+            <h2 id="locked-feature-title">Locked</h2>
+            <p id="locked-feature-message"></p>
+            <button id="locked-feature-close" type="button">Close</button>
         </div>
     </div>
 

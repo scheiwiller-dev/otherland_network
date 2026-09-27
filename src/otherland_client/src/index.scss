@@ -67,8 +67,56 @@ $font-family: 'Orbitron', Arial, sans-serif;
 .hidden {
   display: none;
 }
-#main-menu #side-bar button.future-update {
-  color: $background-semi;
+
+#locked-feature-modal {
+  @include flex-center;
+  position: fixed;
+  inset: 0;
+  z-index: 1100;
+  background: $background-semi;
+
+  &.hidden {
+    display: none;
+  }
+
+  #locked-feature-card {
+    background: $background-dark;
+    color: $secondary-color;
+    width: min(420px, calc(100vw - 32px));
+    padding: 28px 24px;
+    border-radius: 12px;
+    border: 1px solid $primary-color;
+    box-shadow: 0 0 30px rgba($primary-color, 0.3);
+    text-align: center;
+    box-sizing: border-box;
+
+    h2 {
+      color: $primary-color;
+      font-size: 28px;
+      margin: 0 0 12px;
+    }
+
+    p {
+      margin: 0 0 20px;
+      line-height: 1.5;
+    }
+
+    button {
+      @include button-style;
+    }
+  }
+}
+
+#node-title-error {
+  color: #ff6b6b;
+  margin: 8px 0 0;
+  min-height: 1.2em;
+}
+#main-menu #side-bar button.future-update,
+#main-menu #side-bar button.future-update:hover {
+  color: #9aa3ad;
+  box-shadow: none;
+  transform: none;
 }
 body {
   margin: 0;
@@ -223,12 +271,19 @@ canvas {
     left: 280px;
     top: 0;
     height: 100%;
-    width: 100%;
+    width: calc(100% - 280px);
     overflow: hidden;
-    min-width: 665px;
+    min-width: 0;
+    box-sizing: border-box;
     background: $background-semi;
     padding: 100px 40px;
     color: $secondary-color;
+
+    .principal-id,
+    #principal-display,
+    #node-table td:first-child {
+      overflow-wrap: anywhere;
+    }
 
     h2 {
       color: $primary-color;
@@ -296,6 +351,7 @@ canvas {
       }
       #node-buttons {
         display: flex;
+        flex-wrap: wrap;
         #request-new-canister {
           display: none;
         }
@@ -309,8 +365,14 @@ canvas {
           display: none;
         }
       }
+      #node-request-error {
+        color: #ff6b6b;
+        margin: 0;
+        min-height: 0;
+      }
       #treehouse-buttons {
         display: flex;
+        flex-wrap: wrap;
         #peer-info {
           display: none;
         }
@@ -433,14 +495,22 @@ canvas {
       }
     }
 
+    #assets-tab {
+      box-sizing: border-box;
+      height: calc(100vh - 100px);
+      overflow-x: hidden;
+      overflow-y: auto;
+      padding-bottom: 28px;
+    }
+
     #khet-list {
 
-      max-height: calc(100vh - 382px);
+      max-height: max(120px, calc(100vh - 640px));
       width: 100%;
-      height: 100%;
-      overflow-y: scroll;
+      height: auto;
+      overflow-y: auto;
       padding-right: 17px;
-      box-sizing: content-box;
+      box-sizing: border-box;
 
       table tr th {
         text-align: left;
@@ -535,23 +605,17 @@ canvas {
     }
 
     #khet-editor {
-      position: absolute;
-      bottom: -20px;
+      position: static;
+      inset: auto;
       background: $background-dark;
       padding: 15px 15px 0;
       border-radius: 10px;
       border: 1px solid $primary-color;
       margin-top: 15px;
-      width: max-content;
-
-      #draw-up-btn, #draw-close-btn {
-        position: absolute;
-        top: 0;
-        right: 0;
-      }
-      #draw-close-btn {
-        display: none;
-      }
+      margin-bottom: 16px;
+      width: 100%;
+      max-width: 100%;
+      box-sizing: border-box;
 
       button {
         margin: 0;
@@ -580,7 +644,14 @@ canvas {
           border-radius: 5px;
         }
         input#upload-khet {
-          width: 96.7%;
+          width: 100%;
+          max-width: 100%;
+          box-sizing: border-box;
+        }
+
+        .flex-row {
+          flex-wrap: wrap;
+          gap: 12px 15px;
         }
 
         #edit-group {
@@ -600,6 +671,11 @@ canvas {
 
       // X, Y, Z Input Group
       .input-group {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px 12px;
         margin: 15px 0;
 
         label {
@@ -608,13 +684,15 @@ canvas {
         }
 
         div {
-          float: right;
+          display: flex;
+          flex-wrap: wrap;
+          gap: 8px;
         }
 
         div input {
           width: 100px;
           padding: 8px;
-          margin-left: 15px;
+          margin-left: 0;
           color: $secondary-color;
           background-color: #222;
           border-radius: 6px;
@@ -724,14 +802,14 @@ canvas {
   position: fixed;
     background: $background-dark;
     color: $secondary-color;
-    padding: 15px;
-    border-radius: 10px;
+    padding: 8px 10px;
+    border-radius: 8px;
     border: 1px solid $primary-color;
     box-shadow: 0 0 10px rgba($primary-color, 0.2);
-    max-width: 210px;
+    max-width: 168px;
 
   div {
-    margin-top: 15px;
+    margin-top: 8px;
   }
 
   div:first-child {
@@ -739,10 +817,18 @@ canvas {
   }
   
   // Account Switcher
+  #account-icon {
+    display: none;
+  }
+
   #account-switcher {
   
     button {
       @include button-style;
+      width: 100%;
+      box-sizing: border-box;
+      padding: 6px 8px;
+      font-size: 13px;
     }
   }
 
@@ -784,7 +870,7 @@ canvas {
     #crosshairs {
       position: fixed;
       top: calc(50vh - 10px);
-      left: calc(50vb - 10px);
+      left: calc(50vw - 10px);
     }
   }
 
@@ -914,9 +1000,21 @@ canvas {
 // Responsive Design
 @media (max-width: 1000px) {
   #main-menu {
+    top: 48px;
+    height: calc(100vh - 48px);
+    flex-direction: column;
+    overflow: hidden;
+
     #side-bar {
+      position: relative;
+      width: 100%;
+      height: auto;
+      flex: 0 0 auto;
+      box-sizing: border-box;
+      border-right: none;
+      border-bottom: 2.1px $primary-color solid;
       padding: 20px;
-      overflow-y: scroll;
+      overflow-y: auto;
 
       button {
         margin: 10px 0;
@@ -924,16 +1022,34 @@ canvas {
     }
 
     #tab-content {
-      left: 240px;
+      position: relative;
+      left: 0;
+      top: 0;
+      width: 100%;
+      min-width: 0;
+      height: auto;
+      flex: 1 1 auto;
+      min-height: 0;
+      box-sizing: border-box;
       padding: 20px;
-      overflow-y: scroll;
+      overflow-x: hidden;
+      overflow-y: auto;
 
       button {
         margin: 10px 10px 10px 0;
       }
 
+      #assets-tab {
+        height: calc(100vh - 20px);
+        max-height: calc(100vh - 20px);
+        overflow-x: hidden;
+        overflow-y: auto;
+      }
+
       #khet-list {
-        max-height: fit-content;
+        max-height: max(120px, calc(100vh - 520px));
+        height: auto;
+        overflow-y: auto;
 
         /* table tr td {
           padding-right: 10px;
@@ -951,11 +1067,9 @@ canvas {
 
       #khet-editor {
         position: static;
+        width: 100%;
+        max-width: 100%;
         margin-bottom: 40px;
-
-        #draw-up-btn {
-          display: none;
-        }
       }
     }
   }
@@ -994,19 +1108,56 @@ canvas {
   }
 
   #info-box {
-    top: 5px;
-    right: 5px;
+    top: 0;
+    right: 0;
+    left: 0;
+    max-width: none;
+    height: 48px;
+    padding: 0 8px;
+    border-radius: 0;
+    border-top: none;
+    border-left: none;
+    border-right: none;
+    box-sizing: border-box;
+    overflow: visible;
 
-    #account-switcher {
+    #account-icon {
+      display: block;
+      position: absolute;
+      top: 6px;
+      right: 8px;
+      width: 36px;
+      height: 36px;
+      margin: 0;
+      padding: 0;
+      font-size: 14px;
+      line-height: 34px;
+      text-align: center;
+      color: $primary-color;
+      background: $background-dark;
+      border: 1px solid $primary-color;
+      border-radius: 8px;
+      box-shadow: none;
+    }
+
+    #account-switcher,
+    #node-state {
       display: none;
     }
 
-    div {
-      margin: 0;
-    }
+    &.account-open {
+      height: auto;
+      padding-bottom: 8px;
 
-    #node-state {
-      width: 155px;
+      #account-switcher {
+        display: block;
+        margin-top: 48px;
+      }
+
+      #node-state {
+        display: block;
+        width: auto;
+      }
     }
   }
 

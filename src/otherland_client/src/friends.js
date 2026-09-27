@@ -1,10 +1,18 @@
 // Friends management functions
 import { Principal } from '@icp-sdk/core/principal';
 import { getCardinalActor } from './nodeManager.js';
-import { user } from './user.js';
+import { lookupPersonLabel, renderPerson } from './principalLabel.js';
 
 // Function to update and display the friends list and pending requests
 export async function updateFriendsList() {
+    try {
+        await loadFriendsList();
+    } catch (error) {
+        console.error('Failed to load friends list:', error);
+    }
+}
+
+async function loadFriendsList() {
     const actor = await getCardinalActor();
     if (!actor) {
         console.error("Not connected to Cardinal canister");
@@ -35,11 +43,11 @@ export async function updateFriendsList() {
         pendingHeaderRow.appendChild(pendingHeaderActions);
         pendingTable.appendChild(pendingHeaderRow);
 
-        pendingRequests.forEach(request => {
+        for (const request of pendingRequests) {
             const row = document.createElement('tr');
 
             const cellFrom = document.createElement('td');
-            cellFrom.textContent = request.from.toText();
+            renderPerson(cellFrom, await lookupPersonLabel(actor, request.from));
 
             const cellActions = document.createElement('td');
 
@@ -73,8 +81,40 @@ export async function updateFriendsList() {
             row.appendChild(cellFrom);
             row.appendChild(cellActions);
             pendingTable.appendChild(row);
-        });
+        }
         pendingRequestsDiv.appendChild(pendingTable);
+    }
+
+    const outgoingDiv = document.getElementById('outgoing-invites');
+    if (outgoingDiv) {
+        outgoingDiv.innerHTML = '';
+        const outgoing = await actor.getPendingInvitations();
+        if (outgoing.length > 0) {
+            const outgoingTitle = document.createElement('h3');
+            outgoingTitle.textContent = 'Invite Links';
+            outgoingDiv.appendChild(outgoingTitle);
+            outgoing.forEach((entry) => {
+                const token = entry[0];
+                const row = document.createElement('div');
+                const text = document.createElement('span');
+                text.className = 'principal-id';
+                text.textContent = `/?invite=${token}`;
+                const cancelBtn = document.createElement('button');
+                cancelBtn.textContent = 'Cancel';
+                cancelBtn.style.margin = '5px';
+                cancelBtn.addEventListener('click', async () => {
+                    const result = await actor.cancelInvitation(token);
+                    if (result && typeof result === 'object' && 'err' in result) {
+                        alert('Error: ' + result.err);
+                        return;
+                    }
+                    await updateFriendsList();
+                });
+                row.appendChild(text);
+                row.appendChild(cancelBtn);
+                outgoingDiv.appendChild(row);
+            });
+        }
     }
 
     const friendsList = document.getElementById('friends-list');
@@ -86,7 +126,7 @@ export async function updateFriendsList() {
     const headerRow = document.createElement('tr');
 
     const headerPrincipal = document.createElement('th');
-    headerPrincipal.textContent = 'Friend Principal';
+    headerPrincipal.textContent = 'Friend';
 
     const headerActions = document.createElement('th');
     headerActions.textContent = 'Actions';
@@ -95,11 +135,12 @@ export async function updateFriendsList() {
     headerRow.appendChild(headerActions);
     table.appendChild(headerRow);
 
-    friends.forEach(principal => {
+    for (const principal of friends) {
+        const label = await lookupPersonLabel(actor, principal);
         const row = document.createElement('tr');
         
         const cellPrincipal = document.createElement('td');
-        cellPrincipal.textContent = principal.toText(); // Assuming principal has a toText() method
+        renderPerson(cellPrincipal, label);
 
         const cellActions = document.createElement('td');
         
@@ -115,17 +156,20 @@ export async function updateFriendsList() {
         row.appendChild(cellPrincipal);
         row.appendChild(cellActions);
         table.appendChild(row);
-    });
+    }
     friendsList.appendChild(table);
 
     const friendsDropdown = document.getElementById('friends-dropdown');
-    friendsDropdown.innerHTML = '<option value="">Select a friend</option>';
-    friends.forEach(principal => {
-        const option = document.createElement('option');
-        option.value = principal.toText();
-        option.textContent = principal.toText();
-        friendsDropdown.appendChild(option);
-    });
+    if (friendsDropdown) {
+        friendsDropdown.innerHTML = '<option value="">Select a friend</option>';
+        for (const principal of friends) {
+            const label = await lookupPersonLabel(actor, principal);
+            const option = document.createElement('option');
+            option.value = principal.toText();
+            option.textContent = label.primary;
+            friendsDropdown.appendChild(option);
+        }
+    }
 }
 
 // Handle Invitation Acceptance on Page Load

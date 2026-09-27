@@ -1,0 +1,25 @@
+/index.html
+  Content-Security-Policy: default-src 'self'; script-src 'self' 'wasm-unsafe-eval' https://cdn.jsdelivr.net; object-src 'none'; connect-src 'self' 0.peerjs.com wss://0.peerjs.com http://localhost:8000 http://*.localhost:8000 http://id.ai.localhost:8000 https://icp0.io https://*.icp0.io https://icp-api.io https://id.ai https://cdn.jsdelivr.net blob:; font-src 'self' data:
+  Permissions-Policy: xr-spatial-tracking=(self)
+
+/*.js
+  Content-Security-Policy: default-src 'self'; script-src 'self'; object-src 'none'; connect-src 'self' https://icp0.io https://*.icp0.io https://icp-api.io http://localhost:8000 http://*.localhost:8000;
+
+/*.css
+  Content-Security-Policy: default-src 'self'; script-src 'self'; object-src 'none'; connect-src 'self' https://icp0.io https://*.icp0.io https://icp-api.io; font-src 'self' data:
+
+/*.woff2
+  Content-Type: font/woff2
+  Content-Security-Policy: default-src 'self'; script-src 'self'; object-src 'none';
+
+/*.json
+  Content-Security-Policy: default-src 'self'; object-src 'none';
+
+/*.ico
+  Content-Security-Policy: default-src 'self'; object-src 'none';
+
+/*.png
+  Content-Security-Policy: default-src 'self'; object-src 'none';
+
+/*.glb
+  Content-Security-Policy: default-src 'self'; object-src 'none';

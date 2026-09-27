@@ -1,6 +1,6 @@
 {
   "engines": {
-    "node": ">=18.0.0",
+    "node": ">=22.0.0",
     "npm": ">=9.0.0"
   },
   "name": "otherland",
@@ -11,9 +11,10 @@
     "start": "npm start --workspaces --if-present",
     "test": "npm test --workspaces --if-present",
     "mops:setup": "mops install && mops toolchain use moc 1.14.0",
-    "dfx": "bash scripts/dfx.sh",
-    "deploy": "bash scripts/dfx.sh deploy",
-    "deploy:clean": "bash scripts/dfx.sh deploy --clean"
+    "generate": "mops generate candid && npm run generate --workspace otherland_client",
+    "network:start": "icp network start -d",
+    "network:stop": "icp network stop",
+    "deploy": "icp deploy"
   },
   "type": "module",
   "workspaces": [

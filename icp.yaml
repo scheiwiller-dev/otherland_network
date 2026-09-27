@@ -1,0 +1,24 @@
+canisters:
+  - name: cardinal
+    recipe:
+      type: "@dfinity/motoko@v5.1.0"
+    settings:
+      log_visibility: controllers
+  - name: user_node
+    recipe:
+      type: "@dfinity/motoko@v5.1.0"
+  - name: otherland_client
+    recipe:
+      type: "@dfinity/static-site@v0.4.0"
+      configuration:
+        dir: src/otherland_client/dist
+        presync:
+          - npm run build
+
+networks:
+  - name: local
+    mode: managed
+    ii: true
+    gateway:
+      bind: 127.0.0.1
+      port: 8000

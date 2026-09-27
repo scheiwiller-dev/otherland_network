@@ -18,7 +18,7 @@ https://www.youtube.com/@Otherland_Network
 - using Rapier as Physics Engine
 - using peer.js for P2P communication
 - using esprima for custom code
-- written with assistance from Grok
+- written with assistance from Grok and Cursor
 
 `Current Functionality`
 
@@ -42,31 +42,72 @@ https://www.youtube.com/@Otherland_Network
 - Convert glTF, obj, 3ds and other file formats to glb in App
 - NPCs controlled by LLMs through APIs (custom)
 
-`Setup IDE`
+`Setup`
 
-https://internetcomputer.org/docs/building-apps/getting-started/install 
-- Install WSL (ubuntu)
-- Install VS Code (start in WSL mode!)
-- Install nvm, node.js, npm, mops, dfx
-- Clone Git Repo
-- `npm install`
-- `npm run mops:setup`  (installs Motoko 1.14 via mops; required for `mo:core` 2.6)
-- Copy `.env.example` to `.env` (dfx will fill canister IDs on deploy)
-- `dfx start --background --clean`
-- Prefer `npm run deploy` (sets `DFX_MOC_PATH` to the moc pinned in `mops.toml`). Plain `dfx deploy` uses dfx 0.31's bundled moc 1.1, which cannot compile `mo:core` 2.6.
+Install [icp-cli](https://cli.internetcomputer.org/1.6/guides/installation) and ic-wasm, plus Node.js 22 or newer, npm, and mops. The local gateway is `127.0.0.1:8000`. Internet Identity is started with the local network and served at `http://id.ai.localhost:8000`. Motoko compiles through mops (`moc` 1.14.0 in `mops.toml`).
 
-If you see `actorOfPrincipal does not exist` while building Motoko, dfx is using its bundled moc 1.1 instead of the mops toolchain. Fix with:
 ```bash
+npm i -g @icp-sdk/icp-cli @icp-sdk/ic-wasm ic-mops
+```
+
+From a fresh clone:
+
+```bash
+npm install
 npm run mops:setup
+cp .env.example .env
+npm run network:start
 npm run deploy
 ```
 
-`Reset Network`
+`npm run deploy` builds the Motoko canisters, generates the JavaScript bindings, builds the frontend, and installs everything. Open the `otherland_client` URL printed at the end (`http://otherland_client.local.localhost:8000`). Login uses `http://id.ai.localhost:8000`.
 
-'dfx stop' (or 'dfx --killall' if needed)
-'rm -rf .dfx' (if internet identity anchors fail)
-'dfx start --background --clean'
-'npm run deploy'
+`First admin`
+
+Cardinal has no admin until someone claims it. On first boot it generates one setup token and writes it to the controller-only log:
+
+```bash
+icp canister logs cardinal
+```
+
+Log in with Internet Identity. The app shows your principal (also listed under Profile → Identity, and printed in the browser console as `Logged in with principal:`) and asks for that token. The first logged-in principal that submits it becomes admin. The token is then deleted. `icp identity principal` is the deployer identity, not this Internet Identity principal.
+
+`Cycles`
+
+Creating a user node draws cycles from Cardinal and is refused while Cardinal holds less than 2.5T. The local network seeds the deployer identity with cycles. Move some of that balance onto Cardinal:
+
+```bash
+icp cycles balance
+icp canister top-up cardinal --amount 20T
+```
+
+`icp canister status cardinal` prints the canister balance afterward. Repeat the top-up whenever creating another node reports that Cardinal is short on cycles.
+
+For a Vite dev server on port 3000, fill `ICP_CLI_CID_*` in `.env` from `icp canister list`, then:
+
+```bash
+npm start
+```
+
+`Restart the local network`
+
+Stop and start keep the existing canisters:
+
+```bash
+npm run network:stop
+npm run network:start
+```
+
+To wipe local state, including Internet Identity anchors:
+
+```bash
+npm run network:stop
+rm -rf .icp/cache
+npm run network:start
+npm run deploy
+```
+
+That resets the canisters only. The browser still remembers the old anchor (local Internet Identity always starts at `10000`). Login then fails with `bad Identity Anchor 10000`. In Chrome, clear site data for `http://id.ai.localhost:8000` and `http://otherland_client.local.localhost:8000` (lock icon in the address bar, then delete cookies and site data, or DevTools → Application → Storage → Clear site data). Remove the old passkey under `chrome://settings/passkeys` if Chrome offers it again. Then create a new identity.
 
 `Participate`
 
