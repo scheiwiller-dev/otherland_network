@@ -6,19 +6,31 @@ const userId = '2vxsx-fae';
 const friendPrincipal = Principal.selfAuthenticating(new Uint8Array(32).fill(7));
 const friendId = friendPrincipal.toText();
 
-vi.mock('../khet.js', () => ({
-    khetController: { khets: {}, clearKhet: vi.fn(), getKhet: vi.fn() },
-    clearAllKhets: vi.fn(),
-    updateKhetTable: vi.fn(),
-    changekhetEditorDrawer: vi.fn(),
-    saveToCache: vi.fn(),
-    currentEditingKhetId: null,
-    clearCurrentEditingKhetId: vi.fn(),
-}));
+vi.mock('../khet.js', () => {
+    const editor = {
+        currentEditingKhetId: null,
+        editFormSnapshot: null,
+    };
+    return {
+        editor,
+        khetController: { khets: {}, clearKhet: vi.fn(), getKhet: vi.fn() },
+        clearAllKhets: vi.fn(),
+        updateKhetTable: vi.fn(),
+        changekhetEditorDrawer: vi.fn(),
+        saveToCache: vi.fn(),
+        get currentEditingKhetId() { return editor.currentEditingKhetId; },
+        get editFormSnapshot() { return editor.editFormSnapshot; },
+        clearCurrentEditingKhetId: vi.fn(() => {
+            editor.currentEditingKhetId = null;
+            editor.editFormSnapshot = null;
+        }),
+    };
+});
 
 vi.mock('../nodeManager.js', () => ({
-    nodeSettings: { nodeId: 'aaaaa-aa', nodeType: 2 },
+    nodeSettings: { nodeId: 'aaaaa-aa', nodeType: 2, localKhets: {}, saveLocalKhets: vi.fn() },
     getCardinalActor: vi.fn(),
+    getUserNodeActor: vi.fn(),
 }));
 
 vi.mock('../user.js', () => ({
@@ -28,7 +40,8 @@ vi.mock('../user.js', () => ({
 vi.mock('./tabs.js', () => ({ showTab: vi.fn() }));
 
 import { initNodeAssets } from './nodeAssets.js';
-import { getCardinalActor, nodeSettings } from '../nodeManager.js';
+import { getCardinalActor, getUserNodeActor, nodeSettings } from '../nodeManager.js';
+import * as khetApi from '../khet.js';
 
 function createElement(tag) {
     const listeners = {};
@@ -81,6 +94,16 @@ function installDom() {
         'allowed-users-list',
         'friends-dropdown',
         'add-friend-access-btn',
+        'discard-edit-btn',
+        'save-edit-btn',
+        'edit-group',
+        'upload-group',
+        'pos-x',
+        'pos-y',
+        'pos-z',
+        'scale-x',
+        'scale-y',
+        'scale-z',
     ];
     for (const id of ids) {
         const element = createElement(id === 'allowed-users-list' ? 'ul' : 'div');
@@ -236,5 +259,67 @@ describe('node settings access', () => {
         expect(globalThis.alert).toHaveBeenCalledWith('Error: network down');
         expect(elements['public-toggle'].checked).toBe(false);
         expect(reloads).toBe(0);
+    });
+
+    it('saves own-node pose with updateKhetMetadata and shows #err', async () => {
+        const khet = {
+            khetId: 'khet-1',
+            khetType: 'SceneObject',
+            gltfDataSize: 4,
+            gltfDataRef: [],
+            position: [1, 2, 3],
+            originalSize: [1, 1, 1],
+            scale: [1, 1, 1],
+            textures: [],
+            animations: [],
+            code: [],
+            hash: 'abc',
+        };
+        khetApi.editor.currentEditingKhetId = khet.khetId;
+        khetApi.khetController.getKhet.mockReturnValue(khet);
+        const nodeActor = {
+            updateKhetMetadata: vi.fn(async () => ({ err: 'Unauthorized' })),
+        };
+        getUserNodeActor.mockResolvedValue(nodeActor);
+        elements['pos-x'].value = '9';
+        elements['pos-y'].value = '8';
+        elements['pos-z'].value = '7';
+        elements['scale-x'].value = '2';
+        elements['scale-y'].value = '2';
+        elements['scale-z'].value = '2';
+
+        await elements['save-edit-btn'].click();
+
+        expect(nodeActor.updateKhetMetadata).toHaveBeenCalledTimes(1);
+        const [id, metadata] = nodeActor.updateKhetMetadata.mock.calls[0];
+        expect(id).toBe('khet-1');
+        expect(metadata.position).toEqual([9, 8, 7]);
+        expect(metadata.scale).toEqual([2, 2, 2]);
+        expect(globalThis.alert).toHaveBeenCalledWith('Error: Unauthorized');
+        expect(khet.position).toEqual([1, 2, 3]);
+
+        nodeActor.updateKhetMetadata.mockResolvedValue({ ok: null });
+        await elements['save-edit-btn'].click();
+        expect(khet.position).toEqual([9, 8, 7]);
+        expect(khet.scale).toEqual([2, 2, 2]);
+    });
+
+    it('restores the pose captured when Edit was clicked', async () => {
+        khetApi.editor.editFormSnapshot = {
+            position: [4, 5, 6],
+            scale: [2, 3, 4],
+        };
+        elements['pos-x'].value = '0';
+        elements['pos-y'].value = '0';
+        elements['pos-z'].value = '0';
+
+        await elements['discard-edit-btn'].click();
+
+        expect(elements['pos-x'].value).toBe(4);
+        expect(elements['pos-y'].value).toBe(5);
+        expect(elements['pos-z'].value).toBe(6);
+        expect(elements['scale-x'].value).toBe(2);
+        expect(elements['scale-y'].value).toBe(3);
+        expect(elements['scale-z'].value).toBe(4);
     });
 });

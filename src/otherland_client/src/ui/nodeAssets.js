@@ -6,9 +6,10 @@ import {
     changekhetEditorDrawer,
     saveToCache,
     currentEditingKhetId,
+    editFormSnapshot,
     clearCurrentEditingKhetId,
 } from '../khet.js';
-import { nodeSettings, getCardinalActor } from '../nodeManager.js';
+import { nodeSettings, getCardinalActor, getUserNodeActor } from '../nodeManager.js';
 import { user } from '../user.js';
 import { showTab } from './tabs.js';
 
@@ -46,6 +47,47 @@ async function commitNodeAccessChange(action) {
         alert('Error: ' + message);
         return false;
     }
+}
+
+/** Metadata record for updateKhetMetadata, with the form pose applied. */
+function khetMetadataForSave(khet, position, scale) {
+    return {
+        khetId: khet.khetId,
+        khetType: khet.khetType,
+        gltfDataSize: khet.gltfDataSize ?? 0,
+        gltfDataRef: khet.gltfDataRef ?? [],
+        position,
+        originalSize: khet.originalSize ?? [0, 0, 0],
+        scale,
+        textures: khet.textures ?? [],
+        animations: khet.animations ?? [],
+        code: khet.code ?? [],
+        hash: khet.hash ?? '',
+    };
+}
+
+function readPoseFromForm() {
+    return {
+        position: [
+            parseFloat(document.getElementById('pos-x').value) || 0,
+            parseFloat(document.getElementById('pos-y').value) || 0,
+            parseFloat(document.getElementById('pos-z').value) || 0,
+        ],
+        scale: [
+            parseFloat(document.getElementById('scale-x').value) || 1,
+            parseFloat(document.getElementById('scale-y').value) || 1,
+            parseFloat(document.getElementById('scale-z').value) || 1,
+        ],
+    };
+}
+
+function writePoseToForm(position, scale) {
+    document.getElementById('pos-x').value = position[0];
+    document.getElementById('pos-y').value = position[1];
+    document.getElementById('pos-z').value = position[2];
+    document.getElementById('scale-x').value = scale[0];
+    document.getElementById('scale-y').value = scale[1];
+    document.getElementById('scale-z').value = scale[2];
 }
 
 /** Edit node/treehouse assets, khet editor save/discard, and node settings. */
@@ -99,12 +141,9 @@ export function initNodeAssets() {
     const discardEditButton = document.getElementById('discard-edit-btn');
     if (discardEditButton) {
         discardEditButton.addEventListener('click', async () => {
-            document.getElementById('pos-x').value = 0;
-            document.getElementById('pos-y').value = 0;
-            document.getElementById('pos-z').value = 0;
-            document.getElementById('scale-x').value = 1;
-            document.getElementById('scale-y').value = 1;
-            document.getElementById('scale-z').value = 1;
+            const position = editFormSnapshot?.position ?? [0, 0, 0];
+            const scale = editFormSnapshot?.scale ?? [1, 1, 1];
+            writePoseToForm(position, scale);
 
             changekhetEditorDrawer('close');
             document.getElementById('edit-group').style.display = 'none';
@@ -128,16 +167,26 @@ export function initNodeAssets() {
                 return;
             }
 
-            khet.position = [
-                parseFloat(document.getElementById('pos-x').value) || 0,
-                parseFloat(document.getElementById('pos-y').value) || 0,
-                parseFloat(document.getElementById('pos-z').value) || 0
-            ];
-            khet.scale = [
-                parseFloat(document.getElementById('scale-x').value) || 1,
-                parseFloat(document.getElementById('scale-y').value) || 1,
-                parseFloat(document.getElementById('scale-z').value) || 1
-            ];
+            const pose = readPoseFromForm();
+
+            if (nodeSettings.nodeType == 2) {
+                const actor = await getUserNodeActor();
+                if (!actor) {
+                    alert('Error: Not connected to a node');
+                    return;
+                }
+                const result = await actor.updateKhetMetadata(
+                    khet.khetId,
+                    khetMetadataForSave(khet, pose.position, pose.scale),
+                );
+                if (result && typeof result === 'object' && 'err' in result) {
+                    alert('Error: ' + result.err);
+                    return;
+                }
+            }
+
+            khet.position = pose.position;
+            khet.scale = pose.scale;
 
             if (nodeSettings.nodeType == 0) {
                 const khetMetadata = { ...khet };
@@ -146,8 +195,6 @@ export function initNodeAssets() {
                 nodeSettings.saveLocalKhets();
 
                 await saveToCache(khet.khetId, khet);
-            } else if (nodeSettings.nodeType == 2) {
-                // Existing logic for Own Node (unchanged)
             }
 
             khetController.khets[khet.khetId] = khet;
