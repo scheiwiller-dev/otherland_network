@@ -1,6 +1,7 @@
 import { AuthClient } from "@icp-sdk/auth/client";
 import { AnonymousIdentity } from "@icp-sdk/core/agent";
 import { getUserNodeActor, invalidateActors } from './nodeManager.js';
+import { syncPendingUsername } from './usernameSync.js';
 import { identityProvider } from './network.js';
 import { updateFriendsList, handleInvitation } from './friends.js';
 import { showLoggedInUI } from './menu.js';
@@ -131,16 +132,31 @@ async function setupUsername() {
         if (hasUsername) {
             // Username already set → store and continue normally
             localStorage.setItem('username', currentUsername);
+            localStorage.setItem('usernameSynced', currentUsername);
             user.setUserName(currentUsername);
             console.log('Username loaded:', currentUsername);
             return true;  // username ready
-        } else {
-            // No username yet → show the dedicated screen
-            console.log('No username found - showing username setup screen');
-            document.getElementById('start-screen').style.display = 'none';
-            document.getElementById('username-screen').style.display = 'flex';  // use flex for centering
-            return false; // username screen shown
         }
+
+        const storedUsername = localStorage.getItem('username');
+        if (storedUsername) {
+            user.setUserName(storedUsername);
+            if (actor) {
+                await syncPendingUsername({
+                    actor,
+                    storage: localStorage,
+                    notify: (message) => alert('Error: ' + message),
+                });
+            }
+            console.log('Username loaded from this browser:', storedUsername);
+            return true;
+        }
+
+        // No username yet → show the dedicated screen
+        console.log('No username found - showing username setup screen');
+        document.getElementById('start-screen').style.display = 'none';
+        document.getElementById('username-screen').style.display = 'flex';  // use flex for centering
+        return false; // username screen shown
     } catch (error) {
         console.error('Error during username setup:', error);
         return false;
@@ -157,6 +173,7 @@ export async function abortUsernameSetup() {
         user.setUserPrincipal("");
         user.setUserName("");
         localStorage.removeItem('username');
+        localStorage.removeItem('usernameSynced');
         invalidateActors();
         console.log("Username setup aborted - session cleared, returning to start screen");
 

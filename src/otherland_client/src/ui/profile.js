@@ -1,6 +1,7 @@
 import { getCardinalActor, getUserNodeActor } from '../nodeManager.js';
 import { user, updateAccountSwitcher, updateProfileDisplay } from '../user.js';
 import { online } from '../peermesh.js';
+import { applyUsername } from '../usernameSync.js';
 
 async function copyWithFeedback(btn, text) {
     await navigator.clipboard.writeText(text);
@@ -91,21 +92,26 @@ export function initProfile() {
 
             try {
                 const actor = await getUserNodeActor();
-                if (actor) {
-                    await actor.setUsername(newUsername);
+                const outcome = await applyUsername(newUsername, {
+                    actor,
+                    storage: localStorage,
+                    user,
+                });
+                if (!outcome.ok) {
+                    errorEl.textContent = outcome.message;
+                    errorEl.classList.remove('hidden');
+                    return;
                 }
-
-                localStorage.setItem('username', newUsername);
-                user.setUserName(newUsername);
 
                 console.log('Username updated successfully:', newUsername);
 
                 document.getElementById('edit-username-row').classList.add('hidden');
+                errorEl.classList.add('hidden');
                 updateProfileDisplay();
                 updateAccountSwitcher(false);
             } catch (err) {
                 console.error('Failed to update username:', err);
-                errorEl.textContent = 'Failed to update username. Please try again.';
+                errorEl.textContent = err && err.message ? err.message : 'Failed to update username. Please try again.';
                 errorEl.classList.remove('hidden');
             }
         });

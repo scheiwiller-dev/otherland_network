@@ -1,6 +1,7 @@
 import { initAuth, getIdentity, login, user, updateAccountSwitcher } from '../user.js';
 import { updateFriendsList, handleInvitation } from '../friends.js';
 import { getUserNodeActor } from '../nodeManager.js';
+import { applyUsername } from '../usernameSync.js';
 import { online } from '../peermesh.js';
 import { showTab } from './tabs.js';
 import { refreshAdminAccess } from './adminPanel.js';
@@ -40,12 +41,16 @@ function initUsernameSetup() {
 
             try {
                 const actor = await getUserNodeActor();
-                if (actor) {
-                    await actor.setUsername(newUsername);
+                const outcome = await applyUsername(newUsername, {
+                    actor,
+                    storage: localStorage,
+                    user,
+                });
+                if (!outcome.ok) {
+                    errorEl.textContent = outcome.message;
+                    errorEl.style.display = 'block';
+                    return;
                 }
-
-                localStorage.setItem('username', newUsername);
-                user.setUserName(newUsername);
 
                 console.log('Username set successfully:', newUsername);
 
@@ -56,7 +61,7 @@ function initUsernameSetup() {
                 handleInvitation();
             } catch (err) {
                 console.error('Failed to save username:', err);
-                errorEl.textContent = 'Failed to save username. Please try again.';
+                errorEl.textContent = err && err.message ? err.message : 'Failed to save username. Please try again.';
                 errorEl.style.display = 'block';
             }
         });

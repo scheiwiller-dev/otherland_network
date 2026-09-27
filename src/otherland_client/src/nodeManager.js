@@ -2,6 +2,7 @@ import { Actor, HttpAgent } from '@icp-sdk/core/agent';
 import { idlFactory as cardinalIdlFactory } from './bindings/cardinal/cardinal.did.js';
 import { idlFactory as userNodeIdlFactory } from './bindings/user_node/user_node.did.js';
 import { user, authReady, getIdentity, logout } from './user.js';
+import { syncPendingUsername } from './usernameSync.js';
 import { khetController, updateKhetTable } from './khet.js';
 import { online } from './peermesh.js'
 import { CANISTER_IDS } from './canisterIds.js';
@@ -255,6 +256,28 @@ export async function refreshNodeList() {
     return;
 }
 
+// Send a locally chosen username once this canister id is the connected node.
+async function syncUsernameForNode(canisterId) {
+    if (!canisterId || canisterId === 'TreeHouse') return;
+    const previousId = nodeSettings.nodeId;
+    const switched = previousId !== canisterId;
+    if (switched) nodeSettings.nodeId = canisterId;
+    try {
+        const actor = await getUserNodeActor();
+        await syncPendingUsername({
+            actor,
+            storage: localStorage,
+            notify: (message) => alert('Error: ' + message),
+        });
+    } catch (error) {
+        console.error('Failed to sync username:', error);
+        const message = error && error.message ? error.message : String(error);
+        alert('Error: ' + message);
+    } finally {
+        if (switched && previousId) nodeSettings.nodeId = previousId;
+    }
+}
+
 // Request new canister creation by Cardinal
 export async function requestNewCanister() {
     try {
@@ -267,8 +290,10 @@ export async function requestNewCanister() {
         // Assuming the response contains the canister ID
         if ('ok' in result) {
             const userCanisterId = result.ok; // Result.ok is the Principal
-            localStorage.setItem('userCanisterId', userCanisterId.toText());
+            const createdId = userCanisterId.toText();
+            localStorage.setItem('userCanisterId', createdId);
             console.log(`User Canister ID: ${userCanisterId}`);
+            await syncUsernameForNode(createdId);
             return userCanisterId;
         } else {
             throw new Error(result.err);
@@ -362,6 +387,7 @@ export const nodeSettings = {
             document.getElementById("enter-friends-treehouse").style.display = "block";
             break;
         case 2: // Own Otherland Node
+            await syncUsernameForNode(this.nodeId);
             await updateKhetTable();
             document.getElementById("edit-node-btn").style.display = "block";
             document.getElementById("node-settings-btn").style.display = "block";
