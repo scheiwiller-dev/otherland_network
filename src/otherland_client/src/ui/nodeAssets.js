@@ -19,6 +19,35 @@ async function updateNodeSettings() {
     }
 }
 
+/** Text from a Motoko `#err`, or null when the call did not fail that way. */
+function canisterErrorText(result) {
+    if (result && typeof result === 'object' && 'err' in result) {
+        return String(result.err);
+    }
+    return null;
+}
+
+/**
+ * Run an allow-list or visibility update.
+ * `#err` uses the same alert as friend requests. The allow-list reloads only after success.
+ */
+async function commitNodeAccessChange(action) {
+    try {
+        const result = await action();
+        const message = canisterErrorText(result);
+        if (message != null) {
+            alert('Error: ' + message);
+            return false;
+        }
+        updateNodeSettings();
+        return true;
+    } catch (error) {
+        const message = error && error.message ? error.message : String(error);
+        alert('Error: ' + message);
+        return false;
+    }
+}
+
 /** Edit node/treehouse assets, khet editor save/discard, and node settings. */
 export function initNodeAssets() {
     const editNodeBtn = document.getElementById('edit-node-btn');
@@ -150,8 +179,7 @@ export function initNodeAssets() {
                         const removeBtn = document.createElement('button');
                         removeBtn.textContent = 'Remove';
                         removeBtn.addEventListener('click', async () => {
-                            await actor.removeAllowed(principal);
-                            updateNodeSettings();
+                            await commitNodeAccessChange(() => actor.removeAllowed(principal));
                         });
                         li.appendChild(removeBtn);
                         allowedList.appendChild(li);
@@ -172,9 +200,18 @@ export function initNodeAssets() {
 
     const publicToggle = document.getElementById('public-toggle');
     if (publicToggle) {
+        // Skip the change event fired while restoring the checkbox after a failed update.
+        let applyingVisibility = false;
         publicToggle.addEventListener('change', async (e) => {
+            if (applyingVisibility) return;
+            const previous = !e.target.checked;
             const actor = await getCardinalActor();
-            await actor.setNodeVisibility(e.target.checked);
+            const ok = await commitNodeAccessChange(() => actor.setNodeVisibility(e.target.checked));
+            if (!ok) {
+                applyingVisibility = true;
+                e.target.checked = previous;
+                applyingVisibility = false;
+            }
         });
     }
 
@@ -182,12 +219,17 @@ export function initNodeAssets() {
     if (addFriendAccessBtn) {
         addFriendAccessBtn.addEventListener('click', async () => {
             const friendPrincipalText = document.getElementById('friends-dropdown').value;
-            if (friendPrincipalText) {
-                const actor = await getCardinalActor();
-                const friendPrincipal = Principal.fromText(friendPrincipalText);
-                await actor.addAllowed(friendPrincipal);
-                updateNodeSettings();
+            if (!friendPrincipalText) return;
+            if (!nodeSettings.nodeId) {
+                alert('Error: Not connected to a node');
+                return;
             }
+            const actor = await getCardinalActor();
+            await commitNodeAccessChange(() => {
+                const nodeId = Principal.fromText(nodeSettings.nodeId);
+                const friendPrincipal = Principal.fromText(friendPrincipalText);
+                return actor.addAllowedUser(nodeId, friendPrincipal);
+            });
         });
     }
 }
