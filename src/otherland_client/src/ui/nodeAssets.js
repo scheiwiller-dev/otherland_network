@@ -131,20 +131,6 @@ export function initNodeAssets() {
         });
     }
 
-    const drawUpButton = document.getElementById('draw-up-btn');
-    if (drawUpButton) {
-        drawUpButton.addEventListener('click', async () => {
-            changekhetEditorDrawer('open');
-        });
-    }
-
-    const drawCloseButton = document.getElementById('draw-close-btn');
-    if (drawCloseButton) {
-        drawCloseButton.addEventListener('click', async () => {
-            changekhetEditorDrawer('close');
-        });
-    }
-
     const nodeSettingsBtn = document.getElementById('node-settings-btn');
     if (nodeSettingsBtn) {
         nodeSettingsBtn.addEventListener('click', async () => {
