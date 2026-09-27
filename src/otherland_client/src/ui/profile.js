@@ -1,6 +1,7 @@
 import { getCardinalActor, getUserNodeActor } from '../nodeManager.js';
 import { user, updateAccountSwitcher, updateProfileDisplay } from '../user.js';
 import { online } from '../peermesh.js';
+import { applyUsername } from '../usernameSync.js';
 
 async function copyWithFeedback(btn, text) {
     await navigator.clipboard.writeText(text);
@@ -19,19 +20,29 @@ export async function generateFriendInviteLink() {
     const token = await actor.generateFriendInvitation();
     const invitationLink = `${window.location.origin}/?invite=${token}`;
     document.getElementById('invitation-link').textContent = invitationLink;
+    const copyBtn = document.getElementById('copy-invitation-btn');
+    if (copyBtn) copyBtn.classList.remove('hidden');
 }
 
 /** Username edit, copy username/principal/peerid, friend invite/request UI. */
 export function initProfile() {
     const invitationLinkBtn = document.getElementById('invitationLinkBtn');
-    const generateInviteBtn = document.getElementById('generateInviteBtn');
     const addFriendBtn = document.getElementById('add-friend-btn');
 
     if (invitationLinkBtn) {
         invitationLinkBtn.addEventListener('click', () => generateFriendInviteLink());
     }
-    if (generateInviteBtn) {
-        generateInviteBtn.addEventListener('click', () => generateFriendInviteLink());
+    const copyInvitationBtn = document.getElementById('copy-invitation-btn');
+    if (copyInvitationBtn) {
+        copyInvitationBtn.addEventListener('click', async () => {
+            const link = document.getElementById('invitation-link').textContent;
+            if (!link) return;
+            try {
+                await copyWithFeedback(copyInvitationBtn, link);
+            } catch (err) {
+                console.error('Failed to copy invite link:', err);
+            }
+        });
     }
     if (addFriendBtn) {
         addFriendBtn.addEventListener('click', () => {
@@ -91,21 +102,26 @@ export function initProfile() {
 
             try {
                 const actor = await getUserNodeActor();
-                if (actor) {
-                    await actor.setUsername(newUsername);
+                const outcome = await applyUsername(newUsername, {
+                    actor,
+                    storage: localStorage,
+                    user,
+                });
+                if (!outcome.ok) {
+                    errorEl.textContent = outcome.message;
+                    errorEl.classList.remove('hidden');
+                    return;
                 }
-
-                localStorage.setItem('username', newUsername);
-                user.setUserName(newUsername);
 
                 console.log('Username updated successfully:', newUsername);
 
                 document.getElementById('edit-username-row').classList.add('hidden');
+                errorEl.classList.add('hidden');
                 updateProfileDisplay();
                 updateAccountSwitcher(false);
             } catch (err) {
                 console.error('Failed to update username:', err);
-                errorEl.textContent = 'Failed to update username. Please try again.';
+                errorEl.textContent = err && err.message ? err.message : 'Failed to update username. Please try again.';
                 errorEl.classList.remove('hidden');
             }
         });

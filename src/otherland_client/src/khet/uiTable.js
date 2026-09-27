@@ -67,7 +67,10 @@ export async function updateKhetTable() {
             const editKhetButton = document.createElement('button');
             editKhetButton.textContent = "Edit";
             editKhetButton.addEventListener('click', async () => {
-                setCurrentEditingKhetId(khet.khetId);
+                setCurrentEditingKhetId(khet.khetId, {
+                    position: [khet.position[0], khet.position[1], khet.position[2]],
+                    scale: [khet.scale[0], khet.scale[1], khet.scale[2]],
+                });
 
                 // Switch to Edit Display
                 changekhetEditorDrawer('open');

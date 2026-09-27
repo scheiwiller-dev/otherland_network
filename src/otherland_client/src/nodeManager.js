@@ -2,10 +2,12 @@ import { Actor, HttpAgent } from '@icp-sdk/core/agent';
 import { idlFactory as cardinalIdlFactory } from './bindings/cardinal/cardinal.did.js';
 import { idlFactory as userNodeIdlFactory } from './bindings/user_node/user_node.did.js';
 import { user, authReady, getIdentity, logout } from './user.js';
+import { syncPendingUsername } from './usernameSync.js';
 import { khetController, updateKhetTable } from './khet.js';
 import { online } from './peermesh.js'
 import { CANISTER_IDS } from './canisterIds.js';
 import { httpAgentOptions } from './network.js';
+import { nodeHeading, ownerLine } from './nodeListLabel.js';
 
 let cardinalAgentInstance = null;
 let cardinalActor = null;
@@ -160,14 +162,16 @@ export async function getAccessibleCanisters() {
             owner: details.owner.toText(),
             isPublic: details.isPublic,
             username: details.username,
-            cycles: details.cycles
+            cycles: details.cycles,
+            title: Array.isArray(details.title) && details.title.length ? String(details.title[0]) : '',
         }));
 
         // Update UI: Show/hide the "request-new-canister" button
-        if (!ownCanister) {
-            document.getElementById("request-new-canister").style.display = "block";
-        } else {
-            document.getElementById("request-new-canister").style.display = "none";
+        const identity = getIdentity();
+        const anonymous = !identity || identity.getPrincipal().isAnonymous();
+        const createBtn = document.getElementById("request-new-canister");
+        if (createBtn) {
+            createBtn.style.display = (!anonymous && !ownCanister) ? "block" : "none";
         }
 
         return accessibleList;
@@ -214,14 +218,14 @@ export async function refreshNodeList() {
                 tr.style.color = "#00d4ff";
             }
 
-            // NodeID column
             const tdId = document.createElement('td');
-            tdId.textContent = node.canisterId;
+            const heading = nodeHeading(node);
+            tdId.textContent = heading;
+            if (heading === node.canisterId) tdId.className = 'principal-id';
             tr.appendChild(tdId);
 
-            // Owner column
             const tdOwner = document.createElement('td');
-            tdOwner.textContent = node.username + (node.isPublic ? " (Public)" : " (Private)");
+            tdOwner.textContent = ownerLine(node);
             tr.appendChild(tdOwner);
 
             // Cycles column
@@ -255,7 +259,34 @@ export async function refreshNodeList() {
     return;
 }
 
+// Send a locally chosen username once this canister id is the connected node.
+async function syncUsernameForNode(canisterId) {
+    if (!canisterId || canisterId === 'TreeHouse') return;
+    const previousId = nodeSettings.nodeId;
+    const switched = previousId !== canisterId;
+    if (switched) nodeSettings.nodeId = canisterId;
+    try {
+        const actor = await getUserNodeActor();
+        await syncPendingUsername({
+            actor,
+            storage: localStorage,
+            notify: (message) => alert('Error: ' + message),
+        });
+    } catch (error) {
+        console.error('Failed to sync username:', error);
+        const message = error && error.message ? error.message : String(error);
+        alert('Error: ' + message);
+    } finally {
+        if (switched && previousId) nodeSettings.nodeId = previousId;
+    }
+}
+
 // Request new canister creation by Cardinal
+function showNodeRequestError(message) {
+    const el = document.getElementById('node-request-error');
+    if (el) el.textContent = message || '';
+}
+
 export async function requestNewCanister() {
     try {
         // Get Cardinal Actor
@@ -267,14 +298,19 @@ export async function requestNewCanister() {
         // Assuming the response contains the canister ID
         if ('ok' in result) {
             const userCanisterId = result.ok; // Result.ok is the Principal
-            localStorage.setItem('userCanisterId', userCanisterId.toText());
+            const createdId = userCanisterId.toText();
+            localStorage.setItem('userCanisterId', createdId);
             console.log(`User Canister ID: ${userCanisterId}`);
+            showNodeRequestError('');
+            await syncUsernameForNode(createdId);
             return userCanisterId;
         } else {
             throw new Error(result.err);
         }
     } catch (error) {
         console.error('Error requesting canister:', error);
+        const message = error && error.message ? error.message : String(error);
+        showNodeRequestError(message);
     }
 }
 
@@ -362,6 +398,7 @@ export const nodeSettings = {
             document.getElementById("enter-friends-treehouse").style.display = "block";
             break;
         case 2: // Own Otherland Node
+            await syncUsernameForNode(this.nodeId);
             await updateKhetTable();
             document.getElementById("edit-node-btn").style.display = "block";
             document.getElementById("node-settings-btn").style.display = "block";

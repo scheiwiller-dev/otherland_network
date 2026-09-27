@@ -8,6 +8,7 @@ import { vrManager } from './vrui.js';
 
 import { initKeys, keys } from './input/keys.js';
 import { initTabs } from './ui/tabs.js';
+import { initLockedFeatures } from './ui/lockedFeature.js';
 import { initAuthScreens, showLoggedInUI } from './ui/authScreens.js';
 import { initProfile } from './ui/profile.js';
 import { initTreehouseControls } from './ui/treehouseControls.js';
@@ -24,6 +25,7 @@ export { showLoggedInUI };
 
 // Immediate UI wiring (DOM nodes already present via index.html)
 initTabs();
+initLockedFeatures();
 initKeys({
     onEscape: escButtonPress,
     onDebugVr: () => vrManager.debugControllerState(),

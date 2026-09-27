@@ -34,6 +34,7 @@ export function initTabs() {
     const menuButtons = document.querySelectorAll('#side-bar-buttons button');
     menuButtons.forEach(button => {
         button.addEventListener('click', () => {
+            if (button.classList.contains('future-update') || button.disabled) return;
             const tabId = button.id.replace('-btn', '-tab');
             showTab(tabId);
         });

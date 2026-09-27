@@ -6,17 +6,89 @@ import {
     changekhetEditorDrawer,
     saveToCache,
     currentEditingKhetId,
+    editFormSnapshot,
     clearCurrentEditingKhetId,
 } from '../khet.js';
-import { nodeSettings, getCardinalActor } from '../nodeManager.js';
+import { nodeSettings, getCardinalActor, getUserNodeActor, refreshNodeList } from '../nodeManager.js';
 import { user } from '../user.js';
 import { showTab } from './tabs.js';
+import { lookupPersonLabel, renderPerson } from '../principalLabel.js';
 
 async function updateNodeSettings() {
     const nodeSettingsBtn = document.getElementById('node-settings-btn');
     if (nodeSettingsBtn) {
         nodeSettingsBtn.click();
     }
+}
+
+/** Text from a Motoko `#err`, or null when the call did not fail that way. */
+function canisterErrorText(result) {
+    if (result && typeof result === 'object' && 'err' in result) {
+        return String(result.err);
+    }
+    return null;
+}
+
+/**
+ * Run an allow-list or visibility update.
+ * `#err` uses the same alert as friend requests. The allow-list reloads only after success.
+ */
+async function commitNodeAccessChange(action) {
+    try {
+        const result = await action();
+        const message = canisterErrorText(result);
+        if (message != null) {
+            alert('Error: ' + message);
+            return false;
+        }
+        updateNodeSettings();
+        return true;
+    } catch (error) {
+        const message = error && error.message ? error.message : String(error);
+        alert('Error: ' + message);
+        return false;
+    }
+}
+
+/** Metadata record for updateKhetMetadata, with the form pose applied. */
+function khetMetadataForSave(khet, position, scale) {
+    return {
+        khetId: khet.khetId,
+        khetType: khet.khetType,
+        gltfDataSize: khet.gltfDataSize ?? 0,
+        gltfDataRef: khet.gltfDataRef ?? [],
+        position,
+        originalSize: khet.originalSize ?? [0, 0, 0],
+        scale,
+        textures: khet.textures ?? [],
+        animations: khet.animations ?? [],
+        code: khet.code ?? [],
+        hash: khet.hash ?? '',
+    };
+}
+
+function readPoseFromForm() {
+    return {
+        position: [
+            parseFloat(document.getElementById('pos-x').value) || 0,
+            parseFloat(document.getElementById('pos-y').value) || 0,
+            parseFloat(document.getElementById('pos-z').value) || 0,
+        ],
+        scale: [
+            parseFloat(document.getElementById('scale-x').value) || 1,
+            parseFloat(document.getElementById('scale-y').value) || 1,
+            parseFloat(document.getElementById('scale-z').value) || 1,
+        ],
+    };
+}
+
+function writePoseToForm(position, scale) {
+    document.getElementById('pos-x').value = position[0];
+    document.getElementById('pos-y').value = position[1];
+    document.getElementById('pos-z').value = position[2];
+    document.getElementById('scale-x').value = scale[0];
+    document.getElementById('scale-y').value = scale[1];
+    document.getElementById('scale-z').value = scale[2];
 }
 
 /** Edit node/treehouse assets, khet editor save/discard, and node settings. */
@@ -70,12 +142,9 @@ export function initNodeAssets() {
     const discardEditButton = document.getElementById('discard-edit-btn');
     if (discardEditButton) {
         discardEditButton.addEventListener('click', async () => {
-            document.getElementById('pos-x').value = 0;
-            document.getElementById('pos-y').value = 0;
-            document.getElementById('pos-z').value = 0;
-            document.getElementById('scale-x').value = 1;
-            document.getElementById('scale-y').value = 1;
-            document.getElementById('scale-z').value = 1;
+            const position = editFormSnapshot?.position ?? [0, 0, 0];
+            const scale = editFormSnapshot?.scale ?? [1, 1, 1];
+            writePoseToForm(position, scale);
 
             changekhetEditorDrawer('close');
             document.getElementById('edit-group').style.display = 'none';
@@ -99,16 +168,26 @@ export function initNodeAssets() {
                 return;
             }
 
-            khet.position = [
-                parseFloat(document.getElementById('pos-x').value) || 0,
-                parseFloat(document.getElementById('pos-y').value) || 0,
-                parseFloat(document.getElementById('pos-z').value) || 0
-            ];
-            khet.scale = [
-                parseFloat(document.getElementById('scale-x').value) || 1,
-                parseFloat(document.getElementById('scale-y').value) || 1,
-                parseFloat(document.getElementById('scale-z').value) || 1
-            ];
+            const pose = readPoseFromForm();
+
+            if (nodeSettings.nodeType == 2) {
+                const actor = await getUserNodeActor();
+                if (!actor) {
+                    alert('Error: Not connected to a node');
+                    return;
+                }
+                const result = await actor.updateKhetMetadata(
+                    khet.khetId,
+                    khetMetadataForSave(khet, pose.position, pose.scale),
+                );
+                if (result && typeof result === 'object' && 'err' in result) {
+                    alert('Error: ' + result.err);
+                    return;
+                }
+            }
+
+            khet.position = pose.position;
+            khet.scale = pose.scale;
 
             if (nodeSettings.nodeType == 0) {
                 const khetMetadata = { ...khet };
@@ -117,8 +196,6 @@ export function initNodeAssets() {
                 nodeSettings.saveLocalKhets();
 
                 await saveToCache(khet.khetId, khet);
-            } else if (nodeSettings.nodeType == 2) {
-                // Existing logic for Own Node (unchanged)
             }
 
             khetController.khets[khet.khetId] = khet;
@@ -137,44 +214,81 @@ export function initNodeAssets() {
             if (nodeSettings.nodeType == 2) {
                 showTab('node-settings-tab');
                 const actor = await getCardinalActor();
+                const titleInput = document.getElementById('node-title-input');
+                const titleError = document.getElementById('node-title-error');
+                if (titleError) titleError.textContent = '';
+                if (titleInput && actor.getNodeTitle) {
+                    const current = await actor.getNodeTitle();
+                    titleInput.value = Array.isArray(current) && current.length ? String(current[0]) : '';
+                }
                 const visibility = await actor.getNodeVisibility();
                 const isPublic = visibility.length > 0 ? visibility[0] : false;
                 document.getElementById('public-toggle').checked = isPublic;
                 const allowedUsers = await actor.getAllowedUsers();
                 const allowedList = document.getElementById('allowed-users-list');
                 allowedList.innerHTML = '';
-                allowedUsers.forEach(principal => {
-                    if (principal.toText() !== user.getUserPrincipal()) {
-                        const li = document.createElement('li');
-                        li.textContent = principal.toText();
-                        const removeBtn = document.createElement('button');
-                        removeBtn.textContent = 'Remove';
-                        removeBtn.addEventListener('click', async () => {
-                            await actor.removeAllowed(principal);
-                            updateNodeSettings();
-                        });
-                        li.appendChild(removeBtn);
-                        allowedList.appendChild(li);
-                    }
-                });
+                for (const principal of allowedUsers) {
+                    if (principal.toText() === user.getUserPrincipal()) continue;
+                    const li = document.createElement('li');
+                    renderPerson(li, await lookupPersonLabel(actor, principal));
+                    const removeBtn = document.createElement('button');
+                    removeBtn.textContent = 'Remove';
+                    removeBtn.addEventListener('click', async () => {
+                        await commitNodeAccessChange(() => actor.removeAllowed(principal));
+                    });
+                    li.appendChild(removeBtn);
+                    allowedList.appendChild(li);
+                }
                 const friends = await actor.getFriends();
                 const friendsDropdown = document.getElementById('friends-dropdown');
                 friendsDropdown.innerHTML = '<option value="">Select a friend</option>';
-                friends.forEach(friend => {
+                for (const friend of friends) {
+                    const label = await lookupPersonLabel(actor, friend);
                     const option = document.createElement('option');
                     option.value = friend.toText();
-                    option.textContent = friend.toText();
+                    option.textContent = label.primary;
                     friendsDropdown.appendChild(option);
-                });
+                }
+            }
+        });
+    }
+
+    const saveTitleBtn = document.getElementById('save-node-title-btn');
+    if (saveTitleBtn) {
+        saveTitleBtn.addEventListener('click', async () => {
+            const input = document.getElementById('node-title-input');
+            const error = document.getElementById('node-title-error');
+            if (!input || nodeSettings.nodeType != 2) return;
+            if (error) error.textContent = '';
+            const title = input.value.trim();
+            try {
+                const actor = await getCardinalActor();
+                const message = canisterErrorText(await actor.setNodeTitle(title));
+                if (message) {
+                    if (error) error.textContent = message;
+                    return;
+                }
+                await refreshNodeList();
+            } catch (err) {
+                if (error) error.textContent = err && err.message ? err.message : String(err);
             }
         });
     }
 
     const publicToggle = document.getElementById('public-toggle');
     if (publicToggle) {
+        // Skip the change event fired while restoring the checkbox after a failed update.
+        let applyingVisibility = false;
         publicToggle.addEventListener('change', async (e) => {
+            if (applyingVisibility) return;
+            const previous = !e.target.checked;
             const actor = await getCardinalActor();
-            await actor.setNodeVisibility(e.target.checked);
+            const ok = await commitNodeAccessChange(() => actor.setNodeVisibility(e.target.checked));
+            if (!ok) {
+                applyingVisibility = true;
+                e.target.checked = previous;
+                applyingVisibility = false;
+            }
         });
     }
 
@@ -182,12 +296,17 @@ export function initNodeAssets() {
     if (addFriendAccessBtn) {
         addFriendAccessBtn.addEventListener('click', async () => {
             const friendPrincipalText = document.getElementById('friends-dropdown').value;
-            if (friendPrincipalText) {
-                const actor = await getCardinalActor();
-                const friendPrincipal = Principal.fromText(friendPrincipalText);
-                await actor.addAllowed(friendPrincipal);
-                updateNodeSettings();
+            if (!friendPrincipalText) return;
+            if (!nodeSettings.nodeId) {
+                alert('Error: Not connected to a node');
+                return;
             }
+            const actor = await getCardinalActor();
+            await commitNodeAccessChange(() => {
+                const nodeId = Principal.fromText(nodeSettings.nodeId);
+                const friendPrincipal = Principal.fromText(friendPrincipalText);
+                return actor.addAllowedUser(nodeId, friendPrincipal);
+            });
         });
     }
 }

@@ -31,6 +31,7 @@ type CanisterDetails =
    cycles: opt nat;
    isPublic: bool;
    owner: principal;
+   title: opt text;
    username: text;
  };
 service : {
@@ -60,6 +61,7 @@ service : {
   getCyclesBalance: () -> (opt nat) query;
   getFriends: () -> (vec principal) query;
   getNodeStatus: (user: principal) -> (opt NodeStatus);
+  getNodeTitle: () -> (opt text) query;
   getNodeVisibility: () -> (opt bool) query;
   getPendingFriendRequests: () -> (vec FriendRequest) query;
   getPendingInvitations: () -> (vec record {
@@ -77,6 +79,7 @@ service : {
   requestCanister: () -> (Result_1);
   sendFriendRequest: (identifier: text) -> (Result);
   setAdmin: (newAdmin: principal) -> ();
+  setNodeTitle: (title: text) -> (Result);
   setNodeVisibility: (isPublic: bool) -> ();
   topUpNodeCycles: (user: principal, amount: nat) -> ();
   upgradeCanister: () -> (Result);
