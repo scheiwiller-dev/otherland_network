@@ -31,7 +31,30 @@ export async function claimAdminIfNeeded() {
  * WASM upload for admins. Password gate removed — canister enforces admin access.
  * Ignores #wasm-pw if present in the DOM.
  */
+function setWasmStatus(message) {
+    const status = document.getElementById('wasm-admin-status');
+    if (status) status.textContent = message;
+}
+
 export function initAdminWasm() {
+    const upgradeBtn = document.getElementById('upgrade-node-btn');
+    if (upgradeBtn) {
+        upgradeBtn.addEventListener('click', async () => {
+            try {
+                const actor = await getCardinalActor();
+                const result = await actor.upgradeCanister();
+                if (result && 'err' in result) {
+                    setWasmStatus(result.err);
+                    return;
+                }
+                setWasmStatus('Node upgraded.');
+            } catch (error) {
+                console.error('Node upgrade failed:', error);
+                setWasmStatus('Node upgrade failed.');
+            }
+        });
+    }
+
     const wasmFile = document.getElementById('wasm-file-input');
     if (!wasmFile) return;
 
@@ -50,12 +73,13 @@ export function initAdminWasm() {
                 const actor = await getCardinalActor();
                 const result = await actor.uploadWasmModule(wasmBlob);
                 if (result && 'err' in result) {
-                    console.error('WASM upload rejected:', result.err);
+                    setWasmStatus(result.err);
                     return;
                 }
-                console.log('WASM module uploaded successfully');
+                setWasmStatus('WASM module uploaded. Upgrade the node to install it.');
             } catch (error) {
                 console.error('Error uploading WASM module:', error);
+                setWasmStatus('WASM upload failed.');
             }
         };
         reader.readAsArrayBuffer(file);

@@ -778,8 +778,11 @@ persistent actor Cardinal {
     #ok(())
   };
 
-  // Upgrade the user's canister with the current WASM module
+  // Upgrade the admin's own node with the uploaded WASM module.
   public shared({ caller }) func upgradeCanister() : async Result.Result<(), Text> {
+    if (not isAdmin(caller)) {
+      return #err("Unauthorized");
+    };
     switch (registry.get(principalCompare, caller)) {
       case (?canisterId) {
         switch (wasmModule) {
@@ -788,8 +791,11 @@ persistent actor Cardinal {
             await ic.install_code({
               canister_id = canisterId;
               wasm_module = wasmModuleBlob;
-              arg = Array.toBlob([]); // Empty args
-              mode = #upgrade;
+              arg = Array.toBlob([]);
+              mode = #upgrade(?{
+                skip_pre_upgrade = null;
+                wasm_memory_persistence = ?#keep;
+              });
             });
             return #ok(());
           };

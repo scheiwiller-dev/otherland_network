@@ -107,6 +107,8 @@ npm run network:start
 npm run deploy
 ```
 
+That resets the canisters only. The browser still remembers the old anchor (local Internet Identity always starts at `10000`). Login then fails with `bad Identity Anchor 10000`. In Chrome, clear site data for `http://id.ai.localhost:8000` and `http://otherland_client.local.localhost:8000` (lock icon in the address bar, then delete cookies and site data, or DevTools → Application → Storage → Clear site data). Remove the old passkey under `chrome://settings/passkeys` if Chrome offers it again. Then create a new identity.
+
 `Participate`
 
 If you are working on something similar or find this idea interesting, don't hesitate to make contact.
