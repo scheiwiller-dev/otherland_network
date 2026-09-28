@@ -1,7 +1,51 @@
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
+import { toArrayBuffer } from '../library/bytes.js';
 import { computeSHA256 } from '../utils/sha256.js';
+import { assembleKhet } from './record.js';
 import { mapKhetType } from './types.js';
+
+function parseGlbBuffer(buffer) {
+    const loader = new GLTFLoader();
+    return new Promise((resolve, reject) => {
+        try {
+            loader.parse(buffer, '', resolve, (error) => {
+                reject(error instanceof Error ? error : new Error('GLB parse failed'));
+            });
+        } catch (error) {
+            reject(error);
+        }
+    });
+}
+
+/** Build a khet from GLB bytes already loaded from the Library. */
+export async function createKhetFromBytes(gltfData, khetTypeStr, {
+    position = [0, 0, 0],
+    scale = [1, 1, 1],
+    textures = [],
+    code = null,
+    khetId = crypto.randomUUID(),
+} = {}) {
+    const bytes = gltfData instanceof Uint8Array ? gltfData : new Uint8Array(gltfData);
+    const hash = await computeSHA256(bytes);
+    const gltf = await parseGlbBuffer(toArrayBuffer(bytes));
+    const object = gltf.scene;
+    const box = new THREE.Box3().setFromObject(object);
+    const originalSize = box.getSize(new THREE.Vector3());
+    const animations = gltf.animations.length > 0 ? gltf.animations.map((animation) => [animation.name]) : [];
+    return assembleKhet({
+        khetId,
+        khetType: mapKhetType(khetTypeStr),
+        gltfData: bytes,
+        hash,
+        position,
+        scale,
+        originalSize: [originalSize.x, originalSize.y, originalSize.z],
+        animations,
+        textures,
+        code,
+    });
+}
 
 // **Khet Constructor**
 // Asynchronously create a Khet object from a file and user inputs
