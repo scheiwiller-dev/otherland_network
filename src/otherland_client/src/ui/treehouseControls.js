@@ -6,8 +6,12 @@ import { isTouchDevice } from '../movement.js';
 import { CANISTER_IDS } from '../canisterIds.js';
 import { enterViewer } from './gameMenu.js';
 
-/** Load the current node scene and enter the 3D viewer. */
-export async function enterWorld() {
+/**
+ * Load the current node scene and enter the 3D viewer.
+ * `lockPointer: false` is for the automatic guest entry, which has no click yet.
+ * Returns false when the viewer failed to start.
+ */
+export async function enterWorld({ lockPointer = true } = {}) {
     animator.stop();
 
     if (viewerState.ready) {
@@ -15,19 +19,21 @@ export async function enterWorld() {
     }
     if (!viewerState.scene || !viewerState.controls) {
         console.error('3D viewer is not ready');
-        return;
+        return false;
     }
 
     const params = { scene: viewerState.scene, world: viewerState.world, sceneObjects, animationMixers, khetState };
     await worldController.loadScene(params, nodeSettings);
 
     document.getElementById('main-menu').style.display = 'none';
-    if (!isTouchDevice) {
-        viewerState.controls.lock();
-    } else {
+    if (isTouchDevice) {
         enterViewer();
+    } else if (lockPointer) {
+        viewerState.controls.lock();
     }
+    animator.start();
     viewerState.canvas.focus();
+    return true;
 }
 
 function buildShareTreehouseUrl() {
@@ -66,6 +72,7 @@ export function initTreehouseControls() {
     const requestCanisterBtn = document.getElementById('request-new-canister');
     if (requestCanisterBtn) {
         requestCanisterBtn.addEventListener('click', async () => {
+            if (requestCanisterBtn.classList.contains('future-update')) return;
             await requestNewCanister();
             nodeSettings.availableNodes = await getAccessibleCanisters();
             await refreshNodeList();

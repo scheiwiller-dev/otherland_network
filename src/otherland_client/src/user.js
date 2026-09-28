@@ -5,6 +5,7 @@ import { syncPendingUsername } from './usernameSync.js';
 import { identityProvider } from './network.js';
 import { updateFriendsList, handleInvitation } from './friends.js';
 import { showLoggedInUI } from './menu.js';
+import { reportCardinalUnavailable } from './networkStatus.js';
 
 // Authentication client instance and identity
 let authClient;
@@ -71,8 +72,12 @@ export async function login() {
         invalidateActors();
         console.log("Logged in with principal:", user.getUserPrincipal());
 
-        const { claimAdminIfNeeded } = await import('./ui/adminWasm.js');
-        await claimAdminIfNeeded();
+        try {
+            const { claimAdminIfNeeded } = await import('./ui/adminWasm.js');
+            await claimAdminIfNeeded();
+        } catch (error) {
+            reportCardinalUnavailable(error);
+        }
 
         try {
             const { getAccessibleCanisters, nodeSettings } = await import('./nodeManager.js');

@@ -1,13 +1,23 @@
 import { getCardinalActor } from '../nodeManager.js';
 import { getIdentity } from '../user.js';
+import { CARDINAL_CALL_TIMEOUT_MS, CARDINAL_UNREACHABLE, withTimeout } from '../network.js';
+import { reportCardinalUnavailable } from '../networkStatus.js';
 
 /** Ask the logged-in principal to claim admin while Cardinal is still unclaimed. */
 export async function claimAdminIfNeeded() {
     const identity = getIdentity();
     if (!identity || identity.getPrincipal().isAnonymous()) return false;
 
-    const actor = await getCardinalActor();
-    if (await actor.isAdminConfigured()) return true;
+    let actor;
+    try {
+        actor = await getCardinalActor();
+        if (await withTimeout(actor.isAdminConfigured(), CARDINAL_CALL_TIMEOUT_MS, CARDINAL_UNREACHABLE)) {
+            return true;
+        }
+    } catch (error) {
+        reportCardinalUnavailable(error);
+        return false;
+    }
 
     const principal = identity.getPrincipal().toText();
     const token = window.prompt(
