@@ -735,10 +735,32 @@ canvas {
           border: 1px solid $primary-color;
           border-radius: 5px;
         }
-        input#upload-khet {
+        input#library-place-file,
+        #library-place-select,
+        #library-place-name {
           width: 100%;
           max-width: 100%;
           box-sizing: border-box;
+          user-select: text;
+        }
+
+        #library-place-message {
+          min-height: 1.2em;
+          line-height: 1.4;
+
+          &.is-error {
+            color: #ff6b6b;
+          }
+
+          &.is-ok {
+            color: $primary-color;
+          }
+        }
+
+        .library-hint {
+          margin: 0 0 8px;
+          line-height: 1.4;
+          color: #c9d4dc;
         }
 
         .flex-row {

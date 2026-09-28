@@ -152,7 +152,7 @@
                 <h3>List of Avatars</h3>
 
                 <!-- List of all Khets in Node -->
-                <h3>List of Objects in Node</h3>
+                <h3>Already placed here</h3>
                 <div id="khet-list">
                     <table id="khet-table">
                         <tr>
@@ -169,8 +169,13 @@
                 <!-- Khet Editor -->
                 <div id="khet-editor">
                     <div id="upload-group">
-                        <h3>Upload Object</h3>
-                        <input type="file" id="upload-khet" accept=".glb" multiple>
+                        <h3>Place from Library</h3>
+                        <p class="library-hint">Models live in your Library. Place one into this TreeHouse or node. This list is what is already in the world.</p>
+                        <p id="library-place-empty">No Library resources yet. Add a GLB below, or open the Library tab.</p>
+                        <div id="library-place-list" class="hidden">
+                            <label for="library-place-select">Library resource</label>
+                            <select id="library-place-select"></select>
+                        </div>
                         <div class="flex-row">
                             <select id="khet-type">
                                 <option value="SceneObject">Scene Object</option>
@@ -179,9 +184,14 @@
                                 <option value="Entity">Entity</option>
                                 <option value="Avatar">Avatar</option>
                             </select>
-                            <button id="upload-btn">Upload to Node</button>
-                            <button id="cache-btn">Store to Cache</button>
+                            <button id="library-place-btn" type="button">Place in TreeHouse</button>
                         </div>
+                        <h3>Add a GLB to your Library</h3>
+                        <p class="library-hint">The file is saved in your Library, then placed here.</p>
+                        <input type="file" id="library-place-file" accept=".glb,model/gltf-binary">
+                        <input type="text" id="library-place-name" maxlength="80" placeholder="Name (optional)" autocomplete="off">
+                        <button id="library-place-add-btn" type="button">Add and place</button>
+                        <p id="library-place-message" class="library-message" role="status"></p>
                     </div>
                     <div id="edit-group">
                         <h3>Edit Object</h3>

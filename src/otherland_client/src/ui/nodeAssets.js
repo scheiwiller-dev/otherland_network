@@ -12,6 +12,7 @@ import {
 import { nodeSettings, getCardinalActor, getUserNodeActor, refreshNodeList } from '../nodeManager.js';
 import { user } from '../user.js';
 import { showTab } from './tabs.js';
+import { refreshLibraryPlace } from './libraryPlace.js';
 import { lookupPersonLabel, renderPerson } from '../principalLabel.js';
 
 async function updateNodeSettings() {
@@ -98,11 +99,9 @@ export function initNodeAssets() {
         editNodeBtn.addEventListener('click', async () => {
             if (nodeSettings.nodeType == 2) {
                 await updateKhetTable();
-
-                document.getElementById('upload-btn').disabled = false;
-                document.getElementById('cache-btn').disabled = true;
                 document.getElementById('assets-title').innerHTML = 'My Node > Assets';
                 showTab('assets-tab');
+                await refreshLibraryPlace();
             }
         });
     }
@@ -130,11 +129,9 @@ export function initNodeAssets() {
 
             if (nodeSettings.nodeType == 0) {
                 await updateKhetTable();
-
-                document.getElementById('upload-btn').disabled = true;
-                document.getElementById('cache-btn').disabled = false;
                 document.getElementById('assets-title').innerHTML = 'My TreeHouse > Assets';
                 showTab('assets-tab');
+                await refreshLibraryPlace();
             }
         });
     }
