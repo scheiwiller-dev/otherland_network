@@ -8,6 +8,10 @@ export const LOCKED_FEATURES = {
         title: 'Settings',
         message: 'Settings stays locked until you sign in with Internet Identity. More options can be added after that.',
     },
+    'request-new-canister': {
+        title: 'Create new Node',
+        message: 'Creating a node stays locked until you sign in with Internet Identity and pay for cycles. Your TreeHouse does not need a node.',
+    },
 };
 
 export function lockedFeatureCopy(id) {

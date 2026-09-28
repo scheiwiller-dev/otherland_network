@@ -113,10 +113,29 @@ $font-family: 'Orbitron', Arial, sans-serif;
   min-height: 1.2em;
 }
 #main-menu #side-bar button.future-update,
-#main-menu #side-bar button.future-update:hover {
+#main-menu #side-bar button.future-update:hover,
+#main-menu #tab-content button.future-update,
+#main-menu #tab-content button.future-update:hover {
   color: #9aa3ad;
   box-shadow: none;
   transform: none;
+}
+
+#walk-prompt {
+  @include button-style;
+  position: fixed;
+  left: 50%;
+  bottom: 32px;
+  transform: translateX(-50%);
+  z-index: 900;
+
+  &.hidden {
+    display: none;
+  }
+
+  &:hover {
+    transform: translateX(-50%) scale(1.05);
+  }
 }
 body {
   margin: 0;
@@ -349,12 +368,21 @@ canvas {
           width: 125px;
         }
       }
+      #treehouse-lead {
+        margin: 0 0 8px;
+        line-height: 1.4;
+      }
+
+      #network-status {
+        color: #c5ced6;
+        margin: 0 0 12px;
+        min-height: 1.2em;
+        line-height: 1.4;
+      }
+
       #node-buttons {
         display: flex;
         flex-wrap: wrap;
-        #request-new-canister {
-          display: none;
-        }
         #enter-node-btn {
           display: none;
         }

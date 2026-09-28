@@ -10,6 +10,8 @@ describe('locked feature copy', () => {
         }
         expect(lockedFeatureCopy('wallet-btn').message).toMatch(/payment/);
         expect(lockedFeatureCopy('settings-btn').message).not.toBe(lockedFeatureCopy('wallet-btn').message);
+        expect(lockedFeatureCopy('request-new-canister').message).toMatch(/pay|cycles/);
+        expect(lockedFeatureCopy('request-new-canister').message).toMatch(/Internet Identity/);
         expect(LOCKED_FEATURES['node-config-btn']).toBeUndefined();
     });
 });

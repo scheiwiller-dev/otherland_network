@@ -6,15 +6,21 @@ import { refreshCardinalCycles } from './adminPanel.js';
 
 const tabs = document.querySelectorAll('.tab');
 
-/** Show a main-menu tab and refresh tab-specific data. */
-export function showTab(tabId) {
+/**
+ * Show a main-menu tab and refresh tab-specific data.
+ * Pass `{ refreshNetwork: false }` to show TreeHouse controls without contacting Cardinal.
+ */
+export function showTab(tabId, options = {}) {
+    const refreshNetwork = options.refreshNetwork !== false;
     tabs.forEach(tab => {
         tab.style.display = tab.id === tabId ? 'block' : 'none';
     });
     switch (tabId) {
         case 'otherland-tab':
-            refreshNodeList();
-            updateFriendsList();
+            if (refreshNetwork) {
+                refreshNodeList();
+                updateFriendsList();
+            }
             break;
         case 'profile-tab':
             updateProfileDisplay();

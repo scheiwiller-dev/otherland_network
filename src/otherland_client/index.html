@@ -48,9 +48,21 @@
         </div>
         <div id="tab-content">
 
-            <!-- Network -->
-            <div id="otherland-tab" class="tab future-update">
+            <!-- TreeHouse first, network second -->
+            <div id="otherland-tab" class="tab">
+                <h1>TreeHouse</h1>
+                <p id="treehouse-lead">Free on this device. Walk and compose without Cardinal or a sign-in.</p>
+
+                <div id="treehouse-buttons">
+                    <button id="enter-treehouse-btn" class="highlighted">Enter TreeHouse</button>
+                    <button id="toggle-p2p-btn">Open TreeHouse</button>
+                    <button id="share-th-link-btn">Invite Player</button>
+                    <button id="edit-treehouse-btn">Edit Environment</button>
+                    <button id="node-config-btn" type="button">Settings</button>
+                </div>
+
                 <h1>Network</h1>
+                <p id="network-status"></p>
                 <div id="node-list">
                     <table id="node-table">
                         <tr>
@@ -62,21 +74,12 @@
                 </div>
                 <div id="node-buttons">
                     <button id="refresh-node-list-btn">Refresh Node List</button>
-                    <button id="request-new-canister">Create new Node</button>
+                    <button id="request-new-canister" class="future-update" type="button">Create new Node</button>
                     <button id="enter-node-btn" class="highlighted">Enter Node</button>
                     <button id="edit-node-btn">Node Editor</button>
                     <button id="node-settings-btn">Settings</button>
                 </div>
 
-                <h1>TreeHouse</h1>
-
-                <div id="treehouse-buttons">
-                    <button id="enter-treehouse-btn" class="highlighted">Enter TreeHouse</button>
-                    <button id="toggle-p2p-btn">Open TreeHouse</button>
-                    <button id="share-th-link-btn">Invite Player</button>
-                    <button id="edit-treehouse-btn">Edit Environment</button>
-                    <button id="node-config-btn" type="button">Settings</button>
-                </div>
                 <p id="node-request-error"></p>
                 
                 <div id="quick-connect-invitation">
@@ -295,6 +298,8 @@
             </div>
         </div>
     </div>
+
+    <button id="walk-prompt" type="button" class="hidden">Click to look around your TreeHouse</button>
 
     <!-- Game Menu -->
     <div id="game-menu">
