@@ -1,29 +1,47 @@
 import { Actor, HttpAgent } from '@icp-sdk/core/agent';
-import { idlFactory as cardinalIdlFactory } from '../../declarations/cardinal';
-import { idlFactory as userNodeIdlFactory } from '../../declarations/user_node';
-import { user, authReady, getIdentity, logout } from './user.js';
+import { idlFactory as cardinalIdlFactory } from './bindings/cardinal/cardinal.did.js';
+import { idlFactory as userNodeIdlFactory } from './bindings/user_node/user_node.did.js';
+import { user, authReady, getIdentity } from './user.js';
+import { syncPendingUsername } from './usernameSync.js';
 import { khetController, updateKhetTable } from './khet.js';
 import { online } from './peermesh.js'
 import { CANISTER_IDS } from './canisterIds.js';
+import { CARDINAL_CALL_TIMEOUT_MS, CARDINAL_UNREACHABLE, httpAgentOptions, withTimeout } from './network.js';
+import { clearNetworkStatus, reportCardinalUnavailable } from './networkStatus.js';
+import { nodeHeading, ownerLine } from './nodeListLabel.js';
 
 let cardinalAgentInstance = null;
 let cardinalActor = null;
 let cardinalAgentPrincipal = null;
+let cardinalAgentReady = null;
 
 let userNodeAgentInstance = null;
 let userNodeActor = null;
 let userNodeAgentPrincipal = null;
 let userNodeActorCanisterId = null;
+let userNodeAgentReady = null;
 
 /** Drop cached agents/actors so the next get*Actor() rebuilds with current identity/node. */
 export function invalidateActors() {
     cardinalAgentInstance = null;
     cardinalActor = null;
     cardinalAgentPrincipal = null;
+    cardinalAgentReady = null;
     userNodeAgentInstance = null;
     userNodeActor = null;
     userNodeAgentPrincipal = null;
     userNodeActorCanisterId = null;
+    userNodeAgentReady = null;
+}
+
+async function createAgent(identity) {
+    const options = httpAgentOptions(identity);
+    const agent = new HttpAgent(options);
+    if (options.shouldFetchRootKey) {
+        await withTimeout(agent.fetchRootKey(), CARDINAL_CALL_TIMEOUT_MS, CARDINAL_UNREACHABLE);
+        console.log('Root key fetched successfully');
+    }
+    return agent;
 }
 
 function currentPrincipalText() {
@@ -35,28 +53,30 @@ function currentPrincipalText() {
 export async function getCardinalActor() {
     await authReady;
 
+    if (!CANISTER_IDS.CARDINAL) {
+        throw new Error(CARDINAL_UNREACHABLE);
+    }
+
     const principalText = currentPrincipalText();
     if (cardinalAgentInstance && cardinalAgentPrincipal !== principalText) {
         invalidateActors();
     }
 
-    // Create HTTP Agent with Internet Identity
-    if (!cardinalAgentInstance) {
-        cardinalAgentInstance = new HttpAgent({
-            host: process.env.DFX_NETWORK === 'local' ? 'http://localhost:4943' : window.location.origin,
-            identity: getIdentity()
-        });
+    // Create the agent once, and make concurrent callers wait until its root key is ready.
+    if (!cardinalAgentReady) {
+        const identity = getIdentity();
         cardinalAgentPrincipal = principalText;
-
-        if (process.env.DFX_NETWORK === 'local') {
-            try {
-                await cardinalAgentInstance.fetchRootKey();
-                console.log('Root key fetched successfully');
-            } catch (err) {
-                console.error('Unable to fetch root key:', err);
-                throw err;
-            }
-        }
+        cardinalAgentReady = createAgent(identity).then(agent => {
+            cardinalAgentInstance = agent;
+            return agent;
+        }).catch(err => {
+            cardinalAgentReady = null;
+            cardinalAgentPrincipal = null;
+            throw err;
+        });
+    }
+    if (!cardinalAgentInstance) {
+        await cardinalAgentReady;
     }
 
     // Create actor for the cardinal canister
@@ -82,32 +102,32 @@ export async function getUserNodeActor() {
 
     const principalText = currentPrincipalText();
     if (
-        userNodeAgentInstance &&
+        userNodeAgentReady &&
         (userNodeAgentPrincipal !== principalText || userNodeActorCanisterId !== nodeSettings.nodeId)
     ) {
         userNodeAgentInstance = null;
         userNodeActor = null;
         userNodeAgentPrincipal = null;
         userNodeActorCanisterId = null;
+        userNodeAgentReady = null;
     }
 
-    if (!userNodeAgentInstance) {
-        userNodeAgentInstance = new HttpAgent({
-            host: process.env.DFX_NETWORK === 'local' ? 'http://localhost:4943' : window.location.origin,
-            identity: getIdentity()
-        });
+    if (!userNodeAgentReady) {
+        const identity = getIdentity();
+        const nodeId = nodeSettings.nodeId;
         userNodeAgentPrincipal = principalText;
-
-        if (process.env.DFX_NETWORK === 'local') {
-            try {
-                await userNodeAgentInstance.fetchRootKey();
-                console.log('Root key fetched successfully');
-            } catch (err) {
-                console.error('Unable to fetch root key:', err);
-                throw err;
-            }
-        }
+        userNodeActorCanisterId = nodeId;
+        userNodeAgentReady = createAgent(identity).then(agent => {
+            userNodeAgentInstance = agent;
+            return agent;
+        }).catch(err => {
+            userNodeAgentReady = null;
+            userNodeAgentPrincipal = null;
+            userNodeActorCanisterId = null;
+            throw err;
+        });
     }
+    await userNodeAgentReady;
 
     if (!userNodeActor || userNodeActorCanisterId !== nodeSettings.nodeId) {
         userNodeActor = Actor.createActor(userNodeIdlFactory, {
@@ -128,10 +148,11 @@ export async function getAccessibleCanisters() {
         const actor = await getCardinalActor();
 
         // Call the new function that returns detailed info
-        const accessibleCanisters = await actor.getAccessibleCanistersWithDetails();
-
-        // Get the user's principal as a string
-        const userPrincipal = user.getUserPrincipal();
+        const accessibleCanisters = await withTimeout(
+            actor.getAccessibleCanistersWithDetails(),
+            CARDINAL_CALL_TIMEOUT_MS,
+            CARDINAL_UNREACHABLE,
+        );
 
         // Find the user's own canister by checking if cycles is provided (only for owner)
         const ownCanister = accessibleCanisters.find(details => details.cycles !== null);
@@ -147,26 +168,14 @@ export async function getAccessibleCanisters() {
             owner: details.owner.toText(),
             isPublic: details.isPublic,
             username: details.username,
-            cycles: details.cycles
+            cycles: details.cycles,
+            title: Array.isArray(details.title) && details.title.length ? String(details.title[0]) : '',
         }));
 
-        // Update UI: Show/hide the "request-new-canister" button
-        if (!ownCanister) {
-            document.getElementById("request-new-canister").style.display = "block";
-        } else {
-            document.getElementById("request-new-canister").style.display = "none";
-        }
-
+        clearNetworkStatus();
         return accessibleList;
     } catch (error) {
-        console.error('Error getting accessible canisters:', error);
-        // Check if it's a certificate verification error, which can happen if the local replica root key changed
-        if (error.message && (error.message.includes('TrustError') || error.message.includes('Certificate verification'))) {
-            console.warn('Certificate verification failed, likely due to changed root key. Logging out to force re-authentication.');
-            await logout();
-            // Optionally, reload the page or show a message
-            window.location.reload();
-        }
+        reportCardinalUnavailable(error);
         return [];
     }
 }
@@ -202,14 +211,14 @@ export async function refreshNodeList() {
                 tr.style.color = "#00d4ff";
             }
 
-            // NodeID column
             const tdId = document.createElement('td');
-            tdId.textContent = node.canisterId;
+            const heading = nodeHeading(node);
+            tdId.textContent = heading;
+            if (heading === node.canisterId) tdId.className = 'principal-id';
             tr.appendChild(tdId);
 
-            // Owner column
             const tdOwner = document.createElement('td');
-            tdOwner.textContent = node.username + (node.isPublic ? " (Public)" : " (Private)");
+            tdOwner.textContent = ownerLine(node);
             tr.appendChild(tdOwner);
 
             // Cycles column
@@ -243,7 +252,34 @@ export async function refreshNodeList() {
     return;
 }
 
+// Send a locally chosen username once this canister id is the connected node.
+async function syncUsernameForNode(canisterId) {
+    if (!canisterId || canisterId === 'TreeHouse') return;
+    const previousId = nodeSettings.nodeId;
+    const switched = previousId !== canisterId;
+    if (switched) nodeSettings.nodeId = canisterId;
+    try {
+        const actor = await getUserNodeActor();
+        await syncPendingUsername({
+            actor,
+            storage: localStorage,
+            notify: (message) => alert('Error: ' + message),
+        });
+    } catch (error) {
+        console.error('Failed to sync username:', error);
+        const message = error && error.message ? error.message : String(error);
+        alert('Error: ' + message);
+    } finally {
+        if (switched && previousId) nodeSettings.nodeId = previousId;
+    }
+}
+
 // Request new canister creation by Cardinal
+function showNodeRequestError(message) {
+    const el = document.getElementById('node-request-error');
+    if (el) el.textContent = message || '';
+}
+
 export async function requestNewCanister() {
     try {
         // Get Cardinal Actor
@@ -255,14 +291,19 @@ export async function requestNewCanister() {
         // Assuming the response contains the canister ID
         if ('ok' in result) {
             const userCanisterId = result.ok; // Result.ok is the Principal
-            localStorage.setItem('userCanisterId', userCanisterId.toText());
+            const createdId = userCanisterId.toText();
+            localStorage.setItem('userCanisterId', createdId);
             console.log(`User Canister ID: ${userCanisterId}`);
+            showNodeRequestError('');
+            await syncUsernameForNode(createdId);
             return userCanisterId;
         } else {
             throw new Error(result.err);
         }
     } catch (error) {
         console.error('Error requesting canister:', error);
+        const message = error && error.message ? error.message : String(error);
+        showNodeRequestError(message);
     }
 }
 
@@ -350,6 +391,7 @@ export const nodeSettings = {
             document.getElementById("enter-friends-treehouse").style.display = "block";
             break;
         case 2: // Own Otherland Node
+            await syncUsernameForNode(this.nodeId);
             await updateKhetTable();
             document.getElementById("edit-node-btn").style.display = "block";
             document.getElementById("node-settings-btn").style.display = "block";

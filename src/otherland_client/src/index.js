@@ -12,7 +12,7 @@ import { khetController, loadKhet } from './khet.js';
 import { avatarState } from './avatar.js';
 import { online } from './peermesh.js';
 import { nodeSettings } from './nodeManager.js';
-import { logout } from './user.js';
+import { reportCardinalUnavailable } from './networkStatus.js';
 import { vrManager } from './vrui.js';
 import { setupTouchControls } from './movement.js';
 
@@ -503,12 +503,15 @@ export const worldController = {
     }
 }
 
-// Handle unhandled promise rejections, specifically for certificate verification errors
-window.addEventListener('unhandledrejection', async event => {
-    if (event.reason && event.reason.message && (event.reason.message.includes('TrustError') || event.reason.message.includes('Certificate verification'))) {
-        console.warn('Unhandled certificate verification error, likely due to changed root key. Logging out to force re-authentication.');
-        event.preventDefault(); // Prevent the error from being logged as unhandled
-        await logout();
-        window.location.reload();
+// Cardinal certificate failures used to log out and reload. Keep TreeHouse on screen.
+window.addEventListener('unhandledrejection', event => {
+    const message = event.reason && event.reason.message ? event.reason.message : '';
+    if (
+        message.includes('TrustError')
+        || message.includes('Certificate verification')
+        || message.includes('Cardinal is unreachable')
+    ) {
+        event.preventDefault();
+        reportCardinalUnavailable(event.reason);
     }
 });

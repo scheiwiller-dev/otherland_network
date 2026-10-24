@@ -12,6 +12,7 @@ export { loadKhet, loadKhetMeshOnly, clearAllKhets } from './khet/load.js';
 export { updateKhetTable, changekhetEditorDrawer } from './khet/uiTable.js';
 export {
     currentEditingKhetId,
+    editFormSnapshot,
     setCurrentEditingKhetId,
     clearCurrentEditingKhetId,
 } from './khet/editingState.js';

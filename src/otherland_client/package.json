@@ -4,13 +4,15 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "setup": "npm i && npm run dfx --prefix ../.. -- canister create --all && npm run dfx --prefix ../.. -- generate && npm run dfx --prefix ../.. -- deploy",
+    "setup": "npm i && npm run network:start --prefix ../.. && npm run deploy --prefix ../..",
     "start": "vite --port 3000",
-    "prebuild": "npm run dfx --prefix ../.. -- generate",
+    "generate": "icp-bindgen --did-file ../otherland_network/cardinal.did --out-dir src/bindings/cardinal --declarations-flat --actor-disabled --force && icp-bindgen --did-file ../otherland_network/user_node.did --out-dir src/bindings/user_node --declarations-flat --actor-disabled --force",
+    "prebuild": "npm run generate --prefix ../..",
     "build": "tsc && vite build",
     "format": "prettier --write \"src/**/*.{json,js,jsx,ts,tsx,css,scss}\""
   },
   "devDependencies": {
+    "@icp-sdk/bindgen": "^0.4.1",
     "@testing-library/jest-dom": "^6.9.1",
     "cross-fetch": "^4.1.0",
     "dotenv": "^17.4.2",
@@ -19,7 +21,7 @@
     "vite": "^8.2.1",
     "vite-plugin-environment": "^1.1.3",
     "vite-plugin-static-copy": "^4.1.1",
-    "vitest": "^4.1.10"
+    "vitest": "^4.1.11"
   },
   "dependencies": {
     "@dimforge/rapier3d-compat": "^0.20.0",

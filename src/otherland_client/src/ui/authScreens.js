@@ -1,8 +1,19 @@
 import { initAuth, getIdentity, login, user, updateAccountSwitcher } from '../user.js';
 import { updateFriendsList, handleInvitation } from '../friends.js';
-import { getUserNodeActor } from '../nodeManager.js';
+import { getUserNodeActor, nodeSettings, refreshNodeList } from '../nodeManager.js';
+import { applyUsername } from '../usernameSync.js';
 import { online } from '../peermesh.js';
+import { viewerState } from '../index.js';
 import { showTab } from './tabs.js';
+import { refreshAdminAccess } from './adminPanel.js';
+import { enterWorld } from './treehouseControls.js';
+import {
+    initWalkPrompt,
+    markTreehouseOpening,
+    shouldAutoEnterTreehouse,
+    shouldShowWalkPrompt,
+    showWalkPrompt,
+} from './guestEntry.js';
 
 const startScreen = document.getElementById('start-screen');
 const mainMenu = document.getElementById('main-menu');
@@ -12,10 +23,11 @@ const continueGuestBtn = document.getElementById('continue-guest-btn');
 /** Show main menu after a successful login / username setup. */
 export function showLoggedInUI() {
     document.getElementById('start-screen').style.display = 'none';
-    document.getElementById('main-menu').style.display = 'block';
+    document.getElementById('main-menu').style.display = 'flex';
     updateAccountSwitcher(false);
     showTab('otherland-tab');
     updateFriendsList();
+    refreshAdminAccess();
     online.openPeer();
 }
 
@@ -38,12 +50,16 @@ function initUsernameSetup() {
 
             try {
                 const actor = await getUserNodeActor();
-                if (actor) {
-                    await actor.setUsername(newUsername);
+                const outcome = await applyUsername(newUsername, {
+                    actor,
+                    storage: localStorage,
+                    user,
+                });
+                if (!outcome.ok) {
+                    errorEl.textContent = outcome.message;
+                    errorEl.style.display = 'block';
+                    return;
                 }
-
-                localStorage.setItem('username', newUsername);
-                user.setUserName(newUsername);
 
                 console.log('Username set successfully:', newUsername);
 
@@ -54,7 +70,7 @@ function initUsernameSetup() {
                 handleInvitation();
             } catch (err) {
                 console.error('Failed to save username:', err);
-                errorEl.textContent = 'Failed to save username. Please try again.';
+                errorEl.textContent = err && err.message ? err.message : 'Failed to save username. Please try again.';
                 errorEl.style.display = 'block';
             }
         });
@@ -68,14 +84,67 @@ function initUsernameSetup() {
     }
 }
 
+/** Open the local TreeHouse without waiting on Cardinal or Internet Identity. */
+async function openGuestTreehouse() {
+    markTreehouseOpening();
+    try {
+        if (nodeSettings.nodeType !== 0 || nodeSettings.nodeId !== 'TreeHouse') {
+            await nodeSettings.changeNode({ type: 0, id: 'TreeHouse' });
+        }
+    } catch (error) {
+        console.warn('Continuing into TreeHouse without a node switch', error);
+        nodeSettings.nodeType = 0;
+        nodeSettings.nodeId = 'TreeHouse';
+    }
+
+    showTab('otherland-tab', { refreshNetwork: false });
+    const ready = await enterWorld({ lockPointer: false });
+    updateAccountSwitcher(true);
+
+    if (!ready) {
+        const lead = startScreen && startScreen.querySelector('h3');
+        if (lead) lead.textContent = 'The 3D view could not start. Refresh to try TreeHouse again.';
+        for (const id of ['connect-ii-btn', 'continue-guest-btn']) {
+            const button = document.getElementById(id);
+            if (button) button.style.display = '';
+        }
+        return;
+    }
+
+    if (startScreen) startScreen.style.display = 'none';
+    if (mainMenu) mainMenu.style.display = 'none';
+    if (shouldShowWalkPrompt()) showWalkPrompt();
+
+    refreshNodeList();
+    updateFriendsList();
+}
+
+function showGuestMenu() {
+    if (startScreen) startScreen.style.display = 'none';
+    if (mainMenu) mainMenu.style.display = 'flex';
+    updateAccountSwitcher(true);
+    showTab('otherland-tab', { refreshNetwork: false });
+    refreshNodeList();
+    updateFriendsList();
+}
+
 /** Auth start screen, II/guest continue, username setup, and session restore. */
 export async function initAuthScreens() {
     initUsernameSetup();
+    initWalkPrompt(async () => {
+        const element = viewerState.controls && viewerState.controls.domElement;
+        if (!element || typeof element.requestPointerLock !== 'function') {
+            throw new Error('Pointer lock is unavailable');
+        }
+        await element.requestPointerLock();
+    });
 
     await initAuth();
     const identity = getIdentity();
 
-    if (!identity.getPrincipal().isAnonymous()) {
+    if (shouldAutoEnterTreehouse(identity, window.location.search)) {
+        await openGuestTreehouse();
+    } else if (identity && !identity.getPrincipal().isAnonymous()) {
         user.setUserPrincipal(identity.getPrincipal().toText());
 
         const savedUsername = localStorage.getItem('username');
@@ -96,11 +165,12 @@ export async function initAuthScreens() {
     }
 
     if (continueGuestBtn) {
-        continueGuestBtn.addEventListener('click', () => {
-            startScreen.style.display = 'none';
-            mainMenu.style.display = 'block';
-            updateAccountSwitcher(true);
-            showTab('otherland-tab');
+        continueGuestBtn.addEventListener('click', async () => {
+            if (shouldAutoEnterTreehouse(getIdentity(), window.location.search)) {
+                await openGuestTreehouse();
+                return;
+            }
+            showGuestMenu();
         });
     }
 }

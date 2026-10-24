@@ -6,3 +6,11 @@ test = "2.1.2"
 
 [toolchain]
 moc = "1.14.0"
+
+[canisters.cardinal]
+main = "src/otherland_network/cardinal.mo"
+candid = "src/otherland_network/cardinal.did"
+
+[canisters.user_node]
+main = "src/otherland_network/user_node.mo"
+candid = "src/otherland_network/user_node.did"

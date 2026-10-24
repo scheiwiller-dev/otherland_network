@@ -1,0 +1,87 @@
+type Result_1 = 
+ variant {
+   err: text;
+   ok: principal;
+ };
+type Result = 
+ variant {
+   err: text;
+   ok;
+ };
+type NodeStatus = 
+ record {
+   canisterId: principal;
+   cycles: nat;
+   isPublic: bool;
+ };
+type Invitation = 
+ record {
+   expiration: int;
+   inviter: principal;
+ };
+type FriendRequest = 
+ record {
+   from: principal;
+   timestamp: int;
+   to: principal;
+ };
+type CanisterDetails = 
+ record {
+   canisterId: principal;
+   cycles: opt nat;
+   isPublic: bool;
+   owner: principal;
+   title: opt text;
+   username: text;
+ };
+service : {
+  acceptFriendInvitation: (token: text) -> (Result);
+  acceptFriendRequest: (from: principal) -> (Result);
+  addAllowedUser: (nodeId: principal, user: principal) -> (Result);
+  addFriend: (friend: principal) -> ();
+  blockUser: (user: principal, block: bool) -> ();
+  callerIsAdmin: () -> (bool) query;
+  cancelInvitation: (token: text) -> (Result);
+  claimAdmin: (token: text) -> (Result);
+  declineFriendRequest: (from: principal) -> (Result);
+  generateFriendInvitation: () -> (text);
+  getAccessibleCanisters: () ->
+   (vec record {
+          principal;
+          principal;
+          bool;
+        }) query;
+  getAccessibleCanistersWithDetails: () -> (vec CanisterDetails);
+  getAllRegisteredUsers: () -> (vec record {
+                                      principal;
+                                      principal;
+                                    });
+  getAllowedUsers: () -> (vec principal) query;
+  getCanisterId: (user: principal) -> (opt principal) query;
+  getCyclesBalance: () -> (opt nat) query;
+  getFriends: () -> (vec principal) query;
+  getNodeStatus: (user: principal) -> (opt NodeStatus);
+  getNodeTitle: () -> (opt text) query;
+  getNodeVisibility: () -> (opt bool) query;
+  getPendingFriendRequests: () -> (vec FriendRequest) query;
+  getPendingInvitations: () -> (vec record {
+                                      text;
+                                      Invitation;
+                                    }) query;
+  getUsername: (user: principal) -> (opt text) query;
+  isAdminConfigured: () -> (bool) query;
+  isBlocked: (user: principal) -> (bool) query;
+  isFriendWith: (userA: principal, userB: principal) -> (bool) query;
+  isUsernameTaken: (name: text) -> (bool) query;
+  registerUsername: (name: text, user: principal) -> (Result);
+  removeAllowed: (allowed: principal) -> (Result);
+  removeFriend: (friend: principal) -> ();
+  requestCanister: () -> (Result_1);
+  sendFriendRequest: (identifier: text) -> (Result);
+  setAdmin: (newAdmin: principal) -> ();
+  setNodeTitle: (title: text) -> (Result);
+  setNodeVisibility: (isPublic: bool) -> ();
+  topUpNodeCycles: (user: principal, amount: nat) -> ();
+  upgradeCanister: () -> (Result);
+  uploadWasmModule: (wasmModuleBlob: blob) -> (Result);
+}

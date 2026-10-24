@@ -10,9 +10,13 @@ import List "mo:core/List";
 import Array "mo:core/Array";
 import Text "mo:core/Text";
 import Nat "mo:core/Nat";
+import Nat8 "mo:core/Nat8";
+import Nat32 "mo:core/Nat32";
 import Int "mo:core/Int";
 import Time "mo:core/Time";
 import Debug "mo:core/Debug";
+import Random "mo:core/Random";
+import Timer "mo:core/Timer";
 
 import Types "types";
 import Compare "compare";
@@ -37,7 +41,10 @@ persistent actor Cardinal {
 
 
   // Stable variables for raw data
-  var _adminPrincipal : Principal = Principal.fromText("fxhz4-w423j-q2chq-mcdn2-ihrcb-egwai-7eoh5-x4y76-3zzsk-4loyy-fqe");
+  // Placeholder until the first Internet Identity claims admin with the setup token.
+  var _adminPrincipal : Principal = Principal.fromText("2vxsx-fae");
+  var _adminIsSet : Bool = false;
+  var _setupToken : ?Text = null;
   var registryEntries : [(Principal, Principal)] = [];
   var wasmModule : ?Blob = null;
   var isWasmReady : Bool = false;
@@ -50,6 +57,7 @@ persistent actor Cardinal {
   var blockedUsersEntries : [(Principal, ())] = [];
   var auditLogEntries : [Types.AuditLogEntry] = [];
   var usernameEntries : [(Text, Principal)] = [];
+  var nodeTitleEntries : [(Principal, Text)] = [];
 
   // In-memory HashMaps reconstructed from stable data
   transient var registry = Map.fromIter<Principal, Principal>(
@@ -88,6 +96,9 @@ persistent actor Cardinal {
   transient var usernames = Map.fromIter<Text, Principal>(
     usernameEntries.vals(), Text.compare
   );
+  transient var nodeTitles = Map.fromIter<Principal, Text>(
+    nodeTitleEntries.vals(), principalCompare
+  );
   
   // Upgrade hooks to save and restore HashMap data
   system func preupgrade() {
@@ -111,6 +122,7 @@ persistent actor Cardinal {
     );
     auditLogEntries := auditLog;
     usernameEntries := Iter.toArray(usernames.entries());
+    nodeTitleEntries := Iter.toArray(nodeTitles.entries());
   };
 
   system func postupgrade() {
@@ -152,22 +164,90 @@ persistent actor Cardinal {
       usernameEntries.vals(),
       Text.compare
     );
+    nodeTitles := Map.fromIter<Principal, Text>(
+      nodeTitleEntries.vals(),
+      principalCompare
+    );
+  };
+
+  func isAdmin(caller : Principal) : Bool {
+    _adminIsSet and caller == _adminPrincipal
+  };
+
+  func blobToHex(bytes : Blob) : Text {
+    let alphabet : [Text] = ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "a", "b", "c", "d", "e", "f"];
+    var hex = "";
+    for (byte in bytes.vals()) {
+      let n = Nat32.toNat(Nat8.toNat32(byte));
+      hex #= alphabet[n / 16];
+      hex #= alphabet[n % 16];
+    };
+    hex
+  };
+
+  // One token, printed to the controller-only canister log. Claiming it clears it.
+  func publishSetupToken() : async () {
+    if (_adminIsSet or Option.isSome(_setupToken)) return;
+    let entropy = await Random.blob();
+    if (_adminIsSet or Option.isSome(_setupToken)) return;
+    let token = blobToHex(entropy);
+    _setupToken := ?token;
+    Debug.print("Cardinal one-time admin setup token: " # token);
+  };
+
+  ignore Timer.setTimer<system>(#seconds 0, publishSetupToken);
+
+  public query func isAdminConfigured() : async Bool {
+    _adminIsSet
+  };
+
+  public query({ caller }) func callerIsAdmin() : async Bool {
+    isAdmin(caller)
+  };
+
+  public query({ caller }) func getCyclesBalance() : async ?Nat {
+    if (not isAdmin(caller)) return null;
+    ?Cycles.balance()
+  };
+
+  public shared({ caller }) func claimAdmin(token : Text) : async Result.Result<(), Text> {
+    if (caller == Principal.fromText("2vxsx-fae")) {
+      return #err("Log in with Internet Identity before claiming admin");
+    };
+    if (_adminIsSet) {
+      return #err("Admin has already been claimed");
+    };
+    switch (_setupToken) {
+      case null {
+        #err("Setup token is not ready yet. Read `icp canister logs cardinal` and try again.")
+      };
+      case (?expected) {
+        if (token != expected) {
+          return #err("Invalid setup token");
+        };
+        _adminPrincipal := caller;
+        _adminIsSet := true;
+        _setupToken := null;
+        _logAudit(caller, "claimAdmin", "Initial admin claimed");
+        #ok(())
+      };
+    };
   };
 
   // NEW: Admin functions
   public shared({ caller }) func setAdmin(newAdmin: Principal) : async () {
-    if (caller != _adminPrincipal) return;
+    if (not isAdmin(caller)) return;
     _adminPrincipal := newAdmin;
     _logAudit(caller, "setAdmin", "New admin set");
   };
 
   public shared({ caller }) func getAllRegisteredUsers() : async [(Principal, Principal)] {  // user -> node canister
-    if (caller != _adminPrincipal) return [];
+    if (not isAdmin(caller)) return [];
     Iter.toArray(registry.entries());
   };
 
   public shared({ caller }) func getNodeStatus(user: Principal) : async ?Types.NodeStatus {
-    if (caller != _adminPrincipal and caller != user) return null;
+    if (not isAdmin(caller) and caller != user) return null;
     switch (registry.get(principalCompare, user)) {
       case (?canisterId) {
         let isPublic = Option.get(nodeVisibility.get(principalCompare, user), false);
@@ -180,7 +260,7 @@ persistent actor Cardinal {
   };
 
   public shared({ caller }) func topUpNodeCycles(user: Principal, amount: Nat) : async () {
-    if (caller != _adminPrincipal) return;
+    if (not isAdmin(caller)) return;
     switch (registry.get(principalCompare, user)) {
       case (?canisterId) {
         await (with cycles = amount) (actor(Principal.toText(canisterId)) : actor { acceptCycles : () -> async () }).acceptCycles();
@@ -191,7 +271,7 @@ persistent actor Cardinal {
   };
 
   public shared({ caller }) func blockUser(user: Principal, block: Bool) : async () {
-    if (caller != _adminPrincipal) return;
+    if (not isAdmin(caller)) return;
     if (block) {
       blockedUsers.add(principalCompare, user, ());
     } else {
@@ -465,6 +545,28 @@ persistent actor Cardinal {
     nodeVisibility.get(principalCompare, caller);
   };
 
+  // Owner-chosen label for the caller's node. Empty text clears it.
+  public shared({ caller }) func setNodeTitle(title : Text) : async Result.Result<(), Text> {
+    switch (registry.get(principalCompare, caller)) {
+      case null { #err("No node for this account") };
+      case (?_canisterId) {
+        if (title == "") {
+          nodeTitles.remove(principalCompare, caller);
+          #ok(())
+        } else if (Text.size(title) > 48) {
+          #err("Title must be 48 characters or fewer")
+        } else {
+          nodeTitles.add(principalCompare, caller, title);
+          #ok(())
+        }
+      };
+    }
+  };
+
+  public query({ caller }) func getNodeTitle() : async ?Text {
+    nodeTitles.get(principalCompare, caller);
+  };
+
   // Get Allowed Users
   public query({ caller }) func getAllowedUsers() : async [Principal] {
     switch (accessControl.get(principalCompare, caller)) {
@@ -546,6 +648,7 @@ persistent actor Cardinal {
           username;
           isPublic;
           cycles;
+          title = nodeTitles.get(principalCompare, owner);
         });
       }
     };
@@ -573,7 +676,7 @@ persistent actor Cardinal {
 
         // Guard against cardinal running out of cycles
         if (Cycles.balance() < 2_500_000_000_000) {
-          return #err("Cardinal canister has insufficient cycles. Top it up with: dfx ledger fabricate-cycles --all");
+          return #err("Cardinal canister has insufficient cycles. Top it up with: icp canister top-up cardinal --amount 20T");
         };
 
         Debug.print("=== requestCanister start - balance: " # Nat.toText(Cycles.balance()));
@@ -694,7 +797,7 @@ persistent actor Cardinal {
 
   // Upload WASM module (admin only)
   public shared({ caller }) func uploadWasmModule(wasmModuleBlob : Blob) : async Result.Result<(), Text> {
-    if (caller != _adminPrincipal) {
+    if (not isAdmin(caller)) {
       return #err("Unauthorized");
     };
     if (wasmModuleBlob.size() == 0) {
@@ -707,8 +810,11 @@ persistent actor Cardinal {
     #ok(())
   };
 
-  // Upgrade the user's canister with the current WASM module
+  // Upgrade the admin's own node with the uploaded WASM module.
   public shared({ caller }) func upgradeCanister() : async Result.Result<(), Text> {
+    if (not isAdmin(caller)) {
+      return #err("Unauthorized");
+    };
     switch (registry.get(principalCompare, caller)) {
       case (?canisterId) {
         switch (wasmModule) {
@@ -717,8 +823,11 @@ persistent actor Cardinal {
             await ic.install_code({
               canister_id = canisterId;
               wasm_module = wasmModuleBlob;
-              arg = Array.toBlob([]); // Empty args
-              mode = #upgrade;
+              arg = Array.toBlob([]);
+              mode = #upgrade(?{
+                skip_pre_upgrade = null;
+                wasm_memory_persistence = ?#keep;
+              });
             });
             return #ok(());
           };
@@ -744,7 +853,7 @@ persistent actor Cardinal {
       case (?nodeId) { caller == nodeId };
       case null { false };
     };
-    if (caller != user and caller != _adminPrincipal and not callerIsUserNode) {
+    if (caller != user and not isAdmin(caller) and not callerIsUserNode) {
       return #err("Unauthorized");
     };
     if (Text.size(name) < 3 or Text.size(name) > 32) {

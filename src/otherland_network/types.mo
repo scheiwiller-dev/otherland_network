@@ -71,6 +71,7 @@ module {
     username   : Text;
     isPublic   : Bool;
     cycles     : ?Nat; // Only provided if caller is the owner
+    title      : ?Text; // Owner-chosen name, null when unset
   };
 
 };

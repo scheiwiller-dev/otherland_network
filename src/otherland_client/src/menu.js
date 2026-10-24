@@ -8,14 +8,18 @@ import { vrManager } from './vrui.js';
 
 import { initKeys, keys } from './input/keys.js';
 import { initTabs } from './ui/tabs.js';
+import { initLockedFeatures } from './ui/lockedFeature.js';
 import { initAuthScreens, showLoggedInUI } from './ui/authScreens.js';
 import { initProfile } from './ui/profile.js';
 import { initTreehouseControls } from './ui/treehouseControls.js';
+import { initTreehouseSettings } from './ui/treehouseSettings.js';
 import { initNodeAssets } from './ui/nodeAssets.js';
 import { initGameMenu, escButtonPress, userIsInWorld, enterViewer, leaveViewer } from './ui/gameMenu.js';
 import { initVrSession } from './ui/vrSession.js';
-import { initLibraryUpload } from './ui/libraryUpload.js';
+import { initLibraryPanel } from './ui/libraryPanel.js';
+import { initLibraryPlace } from './ui/libraryPlace.js';
 import { initAdminWasm } from './ui/adminWasm.js';
+import { initAdminPanel } from './ui/adminPanel.js';
 
 export { keys };
 export { escButtonPress, userIsInWorld, enterViewer, leaveViewer };
@@ -23,6 +27,7 @@ export { showLoggedInUI };
 
 // Immediate UI wiring (DOM nodes already present via index.html)
 initTabs();
+initLockedFeatures();
 initKeys({
     onEscape: escButtonPress,
     onDebugVr: () => vrManager.debugControllerState(),
@@ -31,13 +36,18 @@ initProfile();
 initGameMenu();
 
 document.addEventListener('DOMContentLoaded', async () => {
-    viewerState.init();
+    viewerState.ready = viewerState.init().catch((error) => {
+        console.error('Failed to initialize the 3D viewer:', error);
+    });
 
     initTreehouseControls();
+    initTreehouseSettings();
     initNodeAssets();
     initVrSession();
-    initLibraryUpload();
+    initLibraryPanel();
+    initLibraryPlace();
     initAdminWasm();
+    initAdminPanel();
 
     await initAuthScreens();
 

@@ -182,7 +182,9 @@ persistent actor UserNode {
                                 return ?"gltfDataRef is unexpectedly null";
                             };
                             case (?ref) {
-                                let finalizeResult = await finalizeBlob(blobId, ref.2, totalChunks);
+                                // Direct call. Awaiting this actor's own method would
+                                // re-enter as the canister principal and fail the writer check.
+                                let finalizeResult = commitBlob(blobId, ref.2, totalChunks);
                                 switch (finalizeResult) {
                                     case (?error) { return ?error };
                                     case (null) {
@@ -331,14 +333,11 @@ persistent actor UserNode {
         blobStore.add(Text.compare, blobId, newChunks); // Update blob storage
     };
 
-    // Finalize a blob by verifying chunk count and recording its total size
-    public shared ({ caller }) func finalizeBlob(blobId : Text, totalSize : Nat, totalChunks : Nat) : async ?Text {
-        if (not Access.isWriter(owner, allowedWriters, caller)) {
-            return ?"Unauthorized";
-        };
+    // Verify chunk count and record total size. Caller is already authorized.
+    func commitBlob(blobId : Text, totalSize : Nat, totalChunks : Nat) : ?Text {
         switch (blobStore.get(Text.compare, blobId)) {
             case (null) {
-                return ?("No chunks found for blobId: " # blobId); // Error if no chunks exist
+                ?("No chunks found for blobId: " # blobId)
             };
             case (?chunks) {
                 if (chunks.size() != totalChunks) {
@@ -351,10 +350,18 @@ persistent actor UserNode {
                 if (actualSize != totalSize) {
                     return ?("Size mismatch for blobId: " # blobId # ". Expected " # Nat.toText(totalSize) # ", got " # Nat.toText(actualSize));
                 };
-                blobMetaStore.add(Text.compare, blobId, totalSize); // Record total size
-                return null; // Success
+                blobMetaStore.add(Text.compare, blobId, totalSize);
+                null
             };
         };
+    };
+
+    // Finalize a blob by verifying chunk count and recording its total size
+    public shared ({ caller }) func finalizeBlob(blobId : Text, totalSize : Nat, totalChunks : Nat) : async ?Text {
+        if (not Access.isWriter(owner, allowedWriters, caller)) {
+            return ?"Unauthorized";
+        };
+        commitBlob(blobId, totalSize, totalChunks)
     };
 
     // Query function to retrieve a specific chunk of a blob

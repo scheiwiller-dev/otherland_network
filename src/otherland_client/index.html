@@ -41,19 +41,32 @@
                 <button id="otherland-btn">Nodes</button>
                 <button id="profile-btn">Profile</button>
                 <button id="library-btn">Library</button>
-                <button id="wallet-btn">Wallet</button>
-                <button id="settings-btn">Settings</button>
+                <button id="wallet-btn" class="future-update" type="button">Wallet</button>
+                <button id="settings-btn" class="future-update" type="button">Settings</button>
+                <button id="admin-btn" class="hidden">Admin</button>
             </div>
         </div>
         <div id="tab-content">
 
-            <!-- Network -->
-            <div id="otherland-tab" class="tab future-update">
+            <!-- TreeHouse first, network second -->
+            <div id="otherland-tab" class="tab">
+                <h1>TreeHouse</h1>
+                <p id="treehouse-lead">Free on this device. Walk and compose without Cardinal or a sign-in.</p>
+
+                <div id="treehouse-buttons">
+                    <button id="enter-treehouse-btn" class="highlighted">Enter TreeHouse</button>
+                    <button id="toggle-p2p-btn">Open TreeHouse</button>
+                    <button id="share-th-link-btn">Invite Player</button>
+                    <button id="edit-treehouse-btn">Edit Environment</button>
+                    <button id="node-config-btn" type="button">Settings</button>
+                </div>
+
                 <h1>Network</h1>
+                <p id="network-status"></p>
                 <div id="node-list">
                     <table id="node-table">
                         <tr>
-                            <th><p>Node ID</p></th>
+                            <th><p>Node</p></th>
                             <th><p>Owner</p></th>
                             <th><p>Cycles</p></th>
                         </tr>
@@ -61,21 +74,13 @@
                 </div>
                 <div id="node-buttons">
                     <button id="refresh-node-list-btn">Refresh Node List</button>
-                    <button id="request-new-canister">Create new Node</button>
+                    <button id="request-new-canister" class="future-update" type="button">Create new Node</button>
                     <button id="enter-node-btn" class="highlighted">Enter Node</button>
                     <button id="edit-node-btn">Node Editor</button>
                     <button id="node-settings-btn">Settings</button>
                 </div>
 
-                <h1>TreeHouse</h1>
-
-                <div id="treehouse-buttons">
-                    <button id="enter-treehouse-btn" class="highlighted">Enter TreeHouse</button>
-                    <button id="toggle-p2p-btn">Open TreeHouse</button>
-                    <button id="share-th-link-btn">Invite Player</button>
-                    <button id="edit-treehouse-btn">Edit Environment</button>
-                    <button id="node-config-btn">Settings</button>
-                </div>
+                <p id="node-request-error"></p>
                 
                 <div id="quick-connect-invitation">
                     <div>
@@ -124,7 +129,6 @@
                     <h2>Friend List</h2>
                     <button id="add-friend-btn">Add Friend</button>
                     <button id="invitationLinkBtn">Generate Invite Link</button>
-                    <button id="generateInviteBtn">Invite Link</button>
                 </div>
                 <div id="add-friend-row" class="hidden">
                     <input type="text" id="friend-identifier-input" placeholder="Enter username or principal">
@@ -133,8 +137,10 @@
                 </div>
                 <div id="friends-info">
                     <div id="pending-requests"></div>
+                    <div id="outgoing-invites"></div>
                     <div id="friends-list"></div>
                     <p id="invitation-link"></p>
+                    <button id="copy-invitation-btn" class="hidden" type="button">Copy link</button>
                 </div>
 
                 <!-- Peer to Peer -->
@@ -149,7 +155,7 @@
                 <h3>List of Avatars</h3>
 
                 <!-- List of all Khets in Node -->
-                <h3>List of Objects in Node</h3>
+                <h3>Already placed here</h3>
                 <div id="khet-list">
                     <table id="khet-table">
                         <tr>
@@ -165,11 +171,14 @@
         
                 <!-- Khet Editor -->
                 <div id="khet-editor">
-                    <div id="draw-up-btn"><button>🡩</button></div>
-                    <div id="draw-close-btn"><button>🗙</button></div>
                     <div id="upload-group">
-                        <h3>Upload Object</h3>
-                        <input type="file" id="upload-khet" accept=".glb" multiple>
+                        <h3>Place from Library</h3>
+                        <p class="library-hint">Models live in your Library. Place one into this TreeHouse or node. This list is what is already in the world.</p>
+                        <p id="library-place-empty">No Library resources yet. Add a GLB below, or open the Library tab.</p>
+                        <div id="library-place-list" class="hidden">
+                            <label for="library-place-select">Library resource</label>
+                            <select id="library-place-select"></select>
+                        </div>
                         <div class="flex-row">
                             <select id="khet-type">
                                 <option value="SceneObject">Scene Object</option>
@@ -178,9 +187,14 @@
                                 <option value="Entity">Entity</option>
                                 <option value="Avatar">Avatar</option>
                             </select>
-                            <button id="upload-btn">Upload to Node</button>
-                            <button id="cache-btn">Store to Cache</button>
+                            <button id="library-place-btn" type="button">Place in TreeHouse</button>
                         </div>
+                        <h3>Add a GLB to your Library</h3>
+                        <p class="library-hint">The file is saved in your Library, then placed here.</p>
+                        <input type="file" id="library-place-file" accept=".glb,model/gltf-binary">
+                        <input type="text" id="library-place-name" maxlength="80" placeholder="Name (optional)" autocomplete="off">
+                        <button id="library-place-add-btn" type="button">Add and place</button>
+                        <p id="library-place-message" class="library-message" role="status"></p>
                     </div>
                     <div id="edit-group">
                         <h3>Edit Object</h3>
@@ -209,9 +223,21 @@
                 </div>
             </div>
 
+            <!-- TreeHouse Settings -->
+            <div id="node-config-tab" class="tab">
+                <h1>TreeHouse settings</h1>
+                <p>These settings are for your TreeHouse.</p>
+            </div>
+
             <!-- Node Settings Tab -->
             <div id="node-settings-tab" class="tab">
                 <h1>Node Settings</h1>
+                <div id="node-title-control">
+                    <label for="node-title-input">Node title</label>
+                    <input type="text" id="node-title-input" maxlength="48" placeholder="Name this node">
+                    <button id="save-node-title-btn" type="button">Save title</button>
+                    <p id="node-title-error"></p>
+                </div>
                 <div id="visibility-control">
                     <label>Node Visibility:</label>
                     <input type="checkbox" id="public-toggle"> Public
@@ -228,31 +254,64 @@
             <!-- Library -->
             <div id="library-tab" class="tab">
                 <h1>Library</h1>
-                
-                <!-- Object Table -->
-                <div id="library-object-list">
-                    <table id="library-object-table">
-                        <thead>
-                            <tr>
-                                <th>Object ID</th>
-                                <th>Description</th>
-                            </tr>
-                        </thead>
-                        <tbody id="library-object-tbody">
-                            <!-- Objects will be populated here -->
-                        </tbody>
-                    </table>
+                <p id="library-lead">Your 3D resources stay in this browser. Guests and TreeHouse can use them without a network node.</p>
+
+                <div id="library-layout">
+                    <div id="library-catalogue">
+                        <h2>Your resources</h2>
+                        <p id="library-empty">No resources yet. Upload a GLB or paste a URL.</p>
+                        <div id="library-object-list" class="hidden">
+                            <table id="library-object-table">
+                                <thead>
+                                    <tr>
+                                        <th>Name</th>
+                                        <th>Source</th>
+                                        <th>Size</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="library-object-tbody"></tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <div id="library-detail">
+                        <h2>Preview</h2>
+                        <div id="library-preview-frame">
+                            <canvas id="library-preview-canvas"></canvas>
+                        </div>
+                        <p id="library-preview-message" class="library-message" role="status">Select a resource to preview it.</p>
+                        <div id="library-detail-actions" class="hidden">
+                            <input type="text" id="library-rename-input" maxlength="80" placeholder="Name" autocomplete="off">
+                            <div class="library-action-row">
+                                <button id="library-rename-btn" type="button">Rename</button>
+                                <button id="library-delete-btn" type="button">Remove</button>
+                            </div>
+                            <p id="library-detail-source"></p>
+                            <p id="library-detail-message" class="library-message" role="status"></p>
+                        </div>
+                    </div>
                 </div>
 
-                <!-- Upload Section -->
                 <div id="library-upload-section">
-                    <h3>Add Object</h3>
-                    <div class="upload-controls">
-                        <input type="file" id="library-upload-input" accept=".glb,.gltf,.obj,.fbx">
-                        <input type="text" id="library-description-input" placeholder="Description">
-                        <button id="library-upload-btn">Upload Object</button>
+                    <div class="library-add-block">
+                        <h3>Upload GLB</h3>
+                        <p class="library-hint">GLB files up to 100MB. Stored on this device.</p>
+                        <div class="upload-controls">
+                            <input type="file" id="library-upload-input" accept=".glb,model/gltf-binary">
+                            <input type="text" id="library-description-input" maxlength="80" placeholder="Name (optional)" autocomplete="off">
+                            <button id="library-upload-btn" type="button">Add file</button>
+                        </div>
                     </div>
-                    <p id="library-upload-message"></p>
+                    <div class="library-add-block">
+                        <h3>Paste URL</h3>
+                        <p class="library-hint">The link is saved even when the host blocks preview.</p>
+                        <div class="upload-controls">
+                            <input type="url" id="library-url-input" placeholder="https://example.com/model.glb" spellcheck="false" autocomplete="off">
+                            <input type="text" id="library-url-name-input" maxlength="80" placeholder="Name (optional)" autocomplete="off">
+                            <button id="library-url-btn" type="button">Add URL</button>
+                        </div>
+                    </div>
+                    <p id="library-upload-message" class="library-message" role="status"></p>
                 </div>
             </div>
 
@@ -267,10 +326,23 @@
             <!-- Settings -->
             <div id="settings-tab" class="tab future-update">
                 <h1>Settings</h1>
+            </div>
+
+            <!-- Admin -->
+            <div id="admin-tab" class="tab">
+                <h1>Admin</h1>
+                <p>Cardinal cycles</p>
+                <p id="cardinal-cycles-balance">—</p>
+                <button id="refresh-cardinal-cycles-btn" type="button">Refresh</button>
+                <h2>User node module</h2>
                 <input type="file" id="wasm-file-input" accept=".wasm" />
+                <button id="upgrade-node-btn" type="button">Upgrade my node</button>
+                <p id="wasm-admin-status"></p>
             </div>
         </div>
     </div>
+
+    <button id="walk-prompt" type="button" class="hidden">Click to look around your TreeHouse</button>
 
     <!-- Game Menu -->
     <div id="game-menu">
@@ -299,6 +371,14 @@
             <h2>Select Avatar</h2>
             <div id="avatar-container"></div>
             <button id="back-avatar-btn">Back</button>
+        </div>
+    </div>
+
+    <div id="locked-feature-modal" class="hidden" role="dialog" aria-modal="true" aria-labelledby="locked-feature-title">
+        <div id="locked-feature-card">
+            <h2 id="locked-feature-title">Locked</h2>
+            <p id="locked-feature-message"></p>
+            <button id="locked-feature-close" type="button">Close</button>
         </div>
     </div>
 
