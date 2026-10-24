@@ -1,40 +1,36 @@
 import { getCardinalActor } from '../nodeManager.js';
 import { getIdentity } from '../user.js';
-import { CARDINAL_CALL_TIMEOUT_MS, CARDINAL_UNREACHABLE, withTimeout } from '../network.js';
+import { CARDINAL_CALL_TIMEOUT_MS, CARDINAL_UNREACHABLE } from '../network.js';
 import { reportCardinalUnavailable } from '../networkStatus.js';
+import { loadAdminClaimStatus } from './adminClaim.js';
+import { initAdminClaimDialog, promptAdminClaim, refreshAdminClaimEntry } from './adminClaimDialog.js';
 
-/** Ask the logged-in principal to claim admin while Cardinal is still unclaimed. */
+/**
+ * Ask the logged-in principal to claim admin while Cardinal is still unclaimed.
+ * The Internet Identity window leaves this tab in the background, and Chrome
+ * drops `window.prompt` there without showing it, so the claim uses an in-app dialog.
+ * A timeout is unreachable, not "an admin already exists".
+ */
 export async function claimAdminIfNeeded() {
     const identity = getIdentity();
     if (!identity || identity.getPrincipal().isAnonymous()) return false;
 
-    let actor;
-    try {
-        actor = await getCardinalActor();
-        if (await withTimeout(actor.isAdminConfigured(), CARDINAL_CALL_TIMEOUT_MS, CARDINAL_UNREACHABLE)) {
-            return true;
-        }
-    } catch (error) {
-        reportCardinalUnavailable(error);
-        return false;
-    }
-
-    const principal = identity.getPrincipal().toText();
-    const token = window.prompt(
-        'Cardinal has no admin yet.\n\nYour principal:\n' + principal +
-        '\n\nPaste the one-time setup token printed by:\nicp canister logs cardinal'
+    const status = await loadAdminClaimStatus(
+        () => getCardinalActor(),
+        CARDINAL_CALL_TIMEOUT_MS,
     );
-    if (!token || !token.trim()) return false;
-
-    const result = await actor.claimAdmin(token.trim());
-    if (result && 'err' in result) {
-        window.alert(result.err);
-        return false;
+    if (!status.reachable) {
+        reportCardinalUnavailable(new Error(CARDINAL_UNREACHABLE));
     }
-    window.alert('This Internet Identity is now the Cardinal admin.');
-    const { refreshAdminAccess } = await import('./adminPanel.js');
-    await refreshAdminAccess();
-    return true;
+    if (status.reachable && status.configured) {
+        await refreshAdminClaimEntry();
+        return true;
+    }
+
+    return promptAdminClaim({
+        principal: identity.getPrincipal().toText(),
+        status,
+    });
 }
 
 /**
@@ -47,6 +43,8 @@ function setWasmStatus(message) {
 }
 
 export function initAdminWasm() {
+    initAdminClaimDialog();
+
     const upgradeBtn = document.getElementById('upgrade-node-btn');
     if (upgradeBtn) {
         upgradeBtn.addEventListener('click', async () => {
@@ -79,7 +77,10 @@ export function initAdminWasm() {
 
             try {
                 const claimed = await claimAdminIfNeeded();
-                if (!claimed) return;
+                if (!claimed) {
+                    setWasmStatus('Admin claim was not completed.');
+                    return;
+                }
                 const actor = await getCardinalActor();
                 const result = await actor.uploadWasmModule(wasmBlob);
                 if (result && 'err' in result) {

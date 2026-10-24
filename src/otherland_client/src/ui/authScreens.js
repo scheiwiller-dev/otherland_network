@@ -11,7 +11,9 @@ import {
     initWalkPrompt,
     markTreehouseOpening,
     shouldAutoEnterTreehouse,
+    shouldPresentSignInScreen,
     shouldShowWalkPrompt,
+    showSignInScreen,
     showWalkPrompt,
 } from './guestEntry.js';
 
@@ -102,12 +104,9 @@ async function openGuestTreehouse() {
     updateAccountSwitcher(true);
 
     if (!ready) {
+        showSignInScreen();
         const lead = startScreen && startScreen.querySelector('h3');
         if (lead) lead.textContent = 'The 3D view could not start. Refresh to try TreeHouse again.';
-        for (const id of ['connect-ii-btn', 'continue-guest-btn']) {
-            const button = document.getElementById(id);
-            if (button) button.style.display = '';
-        }
         return;
     }
 
@@ -156,6 +155,8 @@ export async function initAuthScreens() {
             const { abortUsernameSetup } = await import('../user.js');
             await abortUsernameSetup();
         }
+    } else if (shouldPresentSignInScreen(identity, window.location.search)) {
+        showSignInScreen();
     }
 
     if (connectIIBtn) {

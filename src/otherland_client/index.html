@@ -11,7 +11,7 @@
 <body>
 
     <!-- Start Screen -->
-    <div id="start-screen">
+    <div id="start-screen" class="hidden">
         <H1>Otherland Network</H1>
         <h3>Building connected virtual realms on the Internet Computer to create a shared environment for humans and digital lifeforms.</h3>
         <button id="connect-ii-btn">Login with Internet Identity</button>
@@ -115,6 +115,11 @@
                         <label>Identity:</label>
                         <span id="principal-display"></span>
                         <button id="copy-principal-btn">Copy</button>
+                    </div>
+                    <div id="claim-admin-row" class="profile-row hidden">
+                        <label>Admin:</label>
+                        <span id="claim-admin-status">No Cardinal admin yet</span>
+                        <button id="claim-admin-btn" type="button">Claim admin</button>
                     </div>
                     <div class="profile-row">
                         <label>Peer ID:</label>
@@ -379,6 +384,22 @@
             <h2 id="locked-feature-title">Locked</h2>
             <p id="locked-feature-message"></p>
             <button id="locked-feature-close" type="button">Close</button>
+        </div>
+    </div>
+
+    <div id="admin-claim-modal" class="hidden" role="dialog" aria-modal="true" aria-labelledby="admin-claim-title" aria-describedby="admin-claim-message">
+        <div id="admin-claim-card">
+            <h2 id="admin-claim-title">Claim Cardinal admin</h2>
+            <p id="admin-claim-message"></p>
+            <p id="admin-claim-principal-label">Your principal</p>
+            <p id="admin-claim-principal"></p>
+            <input type="text" id="admin-claim-token" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="Setup token">
+            <p id="admin-claim-feedback" role="status"></p>
+            <div id="admin-claim-actions">
+                <button id="admin-claim-submit" type="button">Claim admin</button>
+                <button id="admin-claim-retry" class="hidden" type="button">Try again</button>
+                <button id="admin-claim-dismiss" type="button">Not now</button>
+            </div>
         </div>
     </div>
 

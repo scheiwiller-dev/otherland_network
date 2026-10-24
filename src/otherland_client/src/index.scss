@@ -153,6 +153,10 @@ canvas {
 #start-screen {
   @include flex-center;
   flex-direction: column;
+
+  &.hidden {
+    display: none;
+  }
   position: fixed;
   top: 0;
   left: 0;
@@ -1322,5 +1326,111 @@ canvas {
       width: 90%;
       padding: 15px;
     }
+  }
+}
+
+#admin-claim-modal {
+  @include flex-center;
+  position: fixed;
+  inset: 0;
+  z-index: 1200;
+  background: $background-semi;
+
+  &.hidden {
+    display: none;
+  }
+
+  #admin-claim-card {
+    background: $background-dark;
+    color: $secondary-color;
+    width: min(480px, calc(100vw - 32px));
+    padding: 28px 24px;
+    border-radius: 12px;
+    border: 1px solid $primary-color;
+    box-shadow: 0 0 30px rgba($primary-color, 0.3);
+    text-align: center;
+    box-sizing: border-box;
+
+    h2 {
+      color: $primary-color;
+      font-size: 28px;
+      margin: 0 0 12px;
+    }
+
+    p {
+      margin: 0 0 16px;
+      line-height: 1.5;
+    }
+
+    #admin-claim-principal-label {
+      margin-bottom: 8px;
+      color: $primary-color;
+    }
+
+    #admin-claim-principal,
+    #admin-claim-token {
+      user-select: text;
+      -webkit-user-select: text;
+    }
+
+    #admin-claim-principal {
+      overflow-wrap: anywhere;
+      text-align: left;
+      background: black;
+      border: 1px solid $primary-color;
+      border-radius: 6px;
+      padding: 12px;
+      margin-bottom: 16px;
+    }
+
+    #admin-claim-token {
+      width: 100%;
+      box-sizing: border-box;
+      padding: 14px;
+      margin-bottom: 12px;
+      font-size: 16px;
+      background: black;
+      color: $secondary-color;
+      border: 1px solid $primary-color;
+      border-radius: 6px;
+      cursor: text;
+    }
+
+    #admin-claim-feedback {
+      min-height: 1.2em;
+
+      &[data-kind='ok'] {
+        color: $accent-color;
+      }
+
+      &[data-kind='err'] {
+        color: #ff6b6b;
+      }
+    }
+
+    #admin-claim-actions {
+      display: flex;
+      justify-content: center;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    button {
+      @include button-style;
+      margin: 0;
+    }
+  }
+}
+
+#main-menu #profile-tab #claim-admin-row {
+  button {
+    width: auto;
+    height: 44px;
+    margin: 0;
+    padding: 8px 14px;
+  }
+
+  #claim-admin-status {
+    max-width: none;
   }
 }
