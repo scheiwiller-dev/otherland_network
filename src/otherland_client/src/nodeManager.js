@@ -1,12 +1,13 @@
 import { Actor, HttpAgent } from '@icp-sdk/core/agent';
 import { idlFactory as cardinalIdlFactory } from './bindings/cardinal/cardinal.did.js';
 import { idlFactory as userNodeIdlFactory } from './bindings/user_node/user_node.did.js';
-import { user, authReady, getIdentity, logout } from './user.js';
+import { user, authReady, getIdentity } from './user.js';
 import { syncPendingUsername } from './usernameSync.js';
 import { khetController, updateKhetTable } from './khet.js';
 import { online } from './peermesh.js'
 import { CANISTER_IDS } from './canisterIds.js';
-import { httpAgentOptions } from './network.js';
+import { CARDINAL_CALL_TIMEOUT_MS, CARDINAL_UNREACHABLE, httpAgentOptions, withTimeout } from './network.js';
+import { clearNetworkStatus, reportCardinalUnavailable } from './networkStatus.js';
 import { nodeHeading, ownerLine } from './nodeListLabel.js';
 
 let cardinalAgentInstance = null;
@@ -37,7 +38,7 @@ async function createAgent(identity) {
     const options = httpAgentOptions(identity);
     const agent = new HttpAgent(options);
     if (options.shouldFetchRootKey) {
-        await agent.fetchRootKey();
+        await withTimeout(agent.fetchRootKey(), CARDINAL_CALL_TIMEOUT_MS, CARDINAL_UNREACHABLE);
         console.log('Root key fetched successfully');
     }
     return agent;
@@ -51,6 +52,10 @@ function currentPrincipalText() {
 // Initialize cardinal agent actor with user identity
 export async function getCardinalActor() {
     await authReady;
+
+    if (!CANISTER_IDS.CARDINAL) {
+        throw new Error(CARDINAL_UNREACHABLE);
+    }
 
     const principalText = currentPrincipalText();
     if (cardinalAgentInstance && cardinalAgentPrincipal !== principalText) {
@@ -143,10 +148,11 @@ export async function getAccessibleCanisters() {
         const actor = await getCardinalActor();
 
         // Call the new function that returns detailed info
-        const accessibleCanisters = await actor.getAccessibleCanistersWithDetails();
-
-        // Get the user's principal as a string
-        const userPrincipal = user.getUserPrincipal();
+        const accessibleCanisters = await withTimeout(
+            actor.getAccessibleCanistersWithDetails(),
+            CARDINAL_CALL_TIMEOUT_MS,
+            CARDINAL_UNREACHABLE,
+        );
 
         // Find the user's own canister by checking if cycles is provided (only for owner)
         const ownCanister = accessibleCanisters.find(details => details.cycles !== null);
@@ -166,23 +172,10 @@ export async function getAccessibleCanisters() {
             title: Array.isArray(details.title) && details.title.length ? String(details.title[0]) : '',
         }));
 
-        // Update UI: Show/hide the "request-new-canister" button
-        const identity = getIdentity();
-        const anonymous = !identity || identity.getPrincipal().isAnonymous();
-        const createBtn = document.getElementById("request-new-canister");
-        if (createBtn) {
-            createBtn.style.display = (!anonymous && !ownCanister) ? "block" : "none";
-        }
-
+        clearNetworkStatus();
         return accessibleList;
     } catch (error) {
-        console.error('Error getting accessible canisters:', error);
-        // Check if it's a certificate verification error, which can happen if the local replica root key changed
-        if (error.message && (error.message.includes('TrustError') || error.message.includes('Certificate verification')) && !getIdentity()?.getPrincipal().isAnonymous()) {
-            console.warn('Certificate verification failed, likely due to changed root key. Logging out to force re-authentication.');
-            await logout();
-            window.location.reload();
-        }
+        reportCardinalUnavailable(error);
         return [];
     }
 }

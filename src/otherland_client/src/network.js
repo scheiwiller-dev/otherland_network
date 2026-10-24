@@ -16,6 +16,23 @@ export function identityProvider() {
   return isLocalNetwork() ? LOCAL_IDENTITY_PROVIDER : IDENTITY_PROVIDER;
 }
 
+/** Bound Cardinal calls so an unreachable replica cannot stall the client. */
+export const CARDINAL_CALL_TIMEOUT_MS = 4000;
+export const CARDINAL_UNREACHABLE = 'Cardinal is unreachable';
+
+export function withTimeout(promise, ms, message) {
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(() => reject(new Error(message)), ms);
+    promise.then((value) => {
+      clearTimeout(timer);
+      resolve(value);
+    }, (error) => {
+      clearTimeout(timer);
+      reject(error);
+    });
+  });
+}
+
 /** Agent options for the current network. Local agents use the asset canister's root key. */
 export function httpAgentOptions(identity) {
   const local = isLocalNetwork();

@@ -1,6 +1,8 @@
 // Friends management functions
 import { Principal } from '@icp-sdk/core/principal';
 import { getCardinalActor } from './nodeManager.js';
+import { CARDINAL_CALL_TIMEOUT_MS, CARDINAL_UNREACHABLE, withTimeout } from './network.js';
+import { reportCardinalUnavailable } from './networkStatus.js';
 import { lookupPersonLabel, renderPerson } from './principalLabel.js';
 
 // Function to update and display the friends list and pending requests
@@ -8,7 +10,7 @@ export async function updateFriendsList() {
     try {
         await loadFriendsList();
     } catch (error) {
-        console.error('Failed to load friends list:', error);
+        reportCardinalUnavailable(error);
     }
 }
 
@@ -18,8 +20,12 @@ async function loadFriendsList() {
         console.error("Not connected to Cardinal canister");
         return;
     }
-    const friends = await actor.getFriends();
-    const pendingRequests = await actor.getPendingFriendRequests();
+    const friends = await withTimeout(actor.getFriends(), CARDINAL_CALL_TIMEOUT_MS, CARDINAL_UNREACHABLE);
+    const pendingRequests = await withTimeout(
+        actor.getPendingFriendRequests(),
+        CARDINAL_CALL_TIMEOUT_MS,
+        CARDINAL_UNREACHABLE,
+    );
 
     // Update pending requests
     const pendingRequestsDiv = document.getElementById('pending-requests');
@@ -88,7 +94,11 @@ async function loadFriendsList() {
     const outgoingDiv = document.getElementById('outgoing-invites');
     if (outgoingDiv) {
         outgoingDiv.innerHTML = '';
-        const outgoing = await actor.getPendingInvitations();
+        const outgoing = await withTimeout(
+            actor.getPendingInvitations(),
+            CARDINAL_CALL_TIMEOUT_MS,
+            CARDINAL_UNREACHABLE,
+        );
         if (outgoing.length > 0) {
             const outgoingTitle = document.createElement('h3');
             outgoingTitle.textContent = 'Invite Links';

@@ -3,11 +3,13 @@ import { animator } from '../animation.js';
 import { avatarState, populateAvatarButtons } from '../avatar.js';
 import { isTouchDevice } from '../movement.js';
 import { keys } from '../input/keys.js';
+import { hideWalkPrompt } from './guestEntry.js';
 
 export let userIsInWorld = false;
 
 /** Enter 3D world HUD / mobile controls after pointer lock (or touch). */
 export function enterViewer() {
+    hideWalkPrompt();
     userIsInWorld = true;
     document.getElementById('guiLayer').style.display = 'block';
     if (isTouchDevice) {
@@ -28,6 +30,7 @@ export function enterViewer() {
 
 /** Leave 3D world and show the in-game pause menu. */
 export function leaveViewer() {
+    hideWalkPrompt();
     const gameMenu = document.getElementById('game-menu');
     gameMenu.style.display = 'flex';
     keys.clear();
@@ -51,6 +54,7 @@ export function escButtonPress() {
 
     if (!isMainMenuVisible) {
         if (!isGameMenuVisible) {
+            hideWalkPrompt();
             gameMenu.style.display = 'flex';
             if (!isTouchDevice) {
                 viewerState.controls.unlock();
