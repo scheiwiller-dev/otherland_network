@@ -3,6 +3,7 @@ import { nodeSettings, getUserNodeActor } from '../nodeManager.js';
 import { saveToCache } from '../storage/idbCache.js';
 import { createKhet } from './create.js';
 import { khetController } from './controller.js';
+import { saveTreehouseKhet } from './placeLocal.js';
 import { updateKhetTable } from './uiTable.js';
 
 // **Upload Khet to Canisters**
@@ -108,9 +109,11 @@ export async function uploadKhet(khet) {
     return khet; // Return immediately with the cached reference
 }
 
-// **Khet Upload Handling**
-// Listen for button click to upload a Khet
-document.getElementById('upload-btn').addEventListener('click', async () => {
+// Legacy file buttons are not in the assets tab. New models are added in the
+// Library and placed from there. These listeners stay only if those elements
+// are present, and they still call uploadKhet / saveTreehouseKhet.
+const uploadBtn = document.getElementById('upload-btn');
+if (uploadBtn) uploadBtn.addEventListener('click', async () => {
     const fileInput = document.getElementById('upload-khet');
     const files = fileInput.files;
     
@@ -150,7 +153,8 @@ document.getElementById('upload-btn').addEventListener('click', async () => {
 });
 
 // Add to Cache
-document.getElementById('cache-btn').addEventListener('click', async () => {
+const cacheBtn = document.getElementById('cache-btn');
+if (cacheBtn) cacheBtn.addEventListener('click', async () => {
     const fileInput = document.getElementById('upload-khet');
     const files = fileInput.files;
     if (files.length === 0) {
@@ -170,18 +174,7 @@ document.getElementById('cache-btn').addEventListener('click', async () => {
         }
 
         const khet = await createKhet(file, khetType, textures, khetCode);
-
-        // Save full Khet (including gltfData) to cache
-        await saveToCache(khet.khetId, khet);
-
-        // Save metadata (without gltfData) to nodeSettings.localKhets
-        const khetMetadata = { ...khet };
-        delete khetMetadata.gltfData; // Exclude large blob data
-        nodeSettings.localKhets[khet.khetId] = khetMetadata;
-        nodeSettings.saveLocalKhets();
-
-        // Add full Khet to khetController.khets for immediate use
-        khetController.khets[khet.khetId] = khet;
+        await saveTreehouseKhet(khet, { saveToCache, nodeSettings, khetController });
 
         fileInput.value = '';
         console.log(`Khet ${khet.khetId} saved to treehouse`);
