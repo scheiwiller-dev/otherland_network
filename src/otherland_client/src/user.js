@@ -6,6 +6,7 @@ import { identityProvider } from './network.js';
 import { updateFriendsList, handleInvitation } from './friends.js';
 import { showLoggedInUI } from './menu.js';
 import { reportCardinalUnavailable } from './networkStatus.js';
+import { showSignInScreen } from './ui/guestEntry.js';
 
 // Authentication client instance and identity
 let authClient;
@@ -185,7 +186,7 @@ export async function abortUsernameSetup() {
         // Force UI back to start screen
         document.getElementById('username-screen').style.display = 'none';
         document.getElementById('main-menu').style.display = 'none';
-        document.getElementById('start-screen').style.display = 'flex';
+        showSignInScreen();
     } catch (error) {
         console.error("Error during abort:", error);
     }
@@ -257,7 +258,7 @@ export function updateAccountSwitcher(isGuest = false) {
             // Return to clean start screen
             document.getElementById('main-menu').style.display = 'none';
             document.getElementById('info-box').style.display = 'none';
-            document.getElementById('start-screen').style.display = 'flex';
+            showSignInScreen();
         });
         container.appendChild(logoutBtn);
     }
@@ -272,4 +273,10 @@ export function updateProfileDisplay() {
 
     usernameDisplay.textContent = user.getUserName() || 'Not set';
     principalDisplay.textContent = user.getUserPrincipal() || 'Not logged in';
+
+    import('./ui/adminClaimDialog.js')
+        .then(({ refreshAdminClaimEntry }) => refreshAdminClaimEntry())
+        .catch((error) => {
+            console.error('Could not refresh admin claim entry:', error);
+        });
 }

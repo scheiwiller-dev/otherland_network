@@ -70,7 +70,9 @@ Cardinal has no admin until someone claims it. On first boot it generates one se
 icp canister logs cardinal
 ```
 
-Log in with Internet Identity. The app shows your principal (also listed under Profile → Identity, and printed in the browser console as `Logged in with principal:`) and asks for that token. The first logged-in principal that submits it becomes admin. The token is then deleted. `icp identity principal` is the deployer identity, not this Internet Identity principal.
+A guest goes straight into TreeHouse. The sign-in screen stays hidden on that first load. Log out, or open an invite link (`?peerId=`), and the login buttons are shown again.
+
+Log in with Internet Identity from those buttons or from the account card. If Cardinal still has no admin, the app opens a dialog (not a browser prompt) that shows your principal — the same value listed under Profile → Identity and printed in the browser console as `Logged in with principal:` — and a field for that token. Paste the token and choose Claim admin. The first logged-in principal that submits a valid token becomes admin, and the token is then deleted. A wrong token, a token that was already used, or a Cardinal outage is reported in that dialog. If you close it, Profile → Identity keeps a Claim admin button until an admin exists. Guests are not asked. `icp identity principal` is the deployer identity, not this Internet Identity principal.
 
 `Cycles`
 
